@@ -1,7 +1,8 @@
 {
+  "version": 2,
   "functions": {
-    "api/backtest.js": {
-      "maxDuration": 60
+    "api/btc.js": {
+      "maxDuration": 30
     }
   },
   "headers": [
