@@ -1,0 +1,2611 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"
+>
+
+<meta name="theme-color" content="#020406">
+
+<meta
+  name="apple-mobile-web-app-capable"
+  content="yes"
+>
+
+<meta
+  name="apple-mobile-web-app-status-bar-style"
+  content="black-translucent"
+>
+
+<title>
+MKAYFX Backtester
+</title>
+
+
+<style>
+
+:root{
+
+  --bg:#020406;
+  --card:#081019;
+  --card2:#050b11;
+  --border:#1b2735;
+
+  --text:#f5f7fa;
+  --muted:#7e899c;
+
+  --gold:#f7c84e;
+  --green:#38e6a3;
+  --red:#ff6177;
+  --blue:#7895ff;
+
+}
+
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+
+html{
+  background:var(--bg);
+}
+
+
+body{
+
+  margin:0;
+
+  min-height:100vh;
+
+  background:
+
+    radial-gradient(
+      circle at top left,
+      rgba(16,45,73,.32),
+      transparent 28%
+    ),
+
+    var(--bg);
+
+  color:var(--text);
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+
+}
+
+
+button,
+input{
+  font:inherit;
+}
+
+
+/* =========================================================
+   APP
+========================================================= */
+
+.app{
+
+  width:100%;
+
+  max-width:900px;
+
+  margin:0 auto;
+
+  padding:
+
+    calc(
+      env(safe-area-inset-top)
+      +
+      28px
+    )
+
+    17px
+
+    calc(
+      env(safe-area-inset-bottom)
+      +
+      60px
+    );
+
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.brand{
+
+  color:var(--gold);
+
+  font-size:14px;
+
+  font-weight:950;
+
+  letter-spacing:6px;
+
+}
+
+
+h1{
+
+  margin:
+    12px
+    0
+    0;
+
+  font-size:39px;
+
+  line-height:.98;
+
+  letter-spacing:-2px;
+
+}
+
+
+.subtitle{
+
+  margin-top:15px;
+
+  color:var(--muted);
+
+  font-size:15px;
+
+  line-height:1.5;
+
+}
+
+
+/* =========================================================
+   CARD
+========================================================= */
+
+.card{
+
+  margin-top:23px;
+
+  padding:21px;
+
+  border-radius:27px;
+
+  border:1px solid var(--border);
+
+  background:
+
+    linear-gradient(
+      145deg,
+      rgba(11,18,28,.98),
+      rgba(5,9,14,.98)
+    );
+
+}
+
+
+/* =========================================================
+   SECTION
+========================================================= */
+
+.sectionTitle{
+
+  margin-top:38px;
+
+  margin-bottom:14px;
+
+  font-size:26px;
+
+  font-weight:950;
+
+  letter-spacing:-1px;
+
+}
+
+
+/* =========================================================
+   INPUTS
+========================================================= */
+
+.inputs{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:11px;
+
+}
+
+
+.field{
+
+  padding:14px;
+
+  border-radius:18px;
+
+  border:1px solid var(--border);
+
+  background:#060d14;
+
+}
+
+
+label{
+
+  display:block;
+
+  margin-bottom:8px;
+
+  color:#7f8a9d;
+
+  font-size:9px;
+
+  font-weight:950;
+
+  letter-spacing:1.5px;
+
+}
+
+
+input{
+
+  width:100%;
+
+  padding:0;
+
+  border:0;
+
+  outline:0;
+
+  background:transparent;
+
+  color:white;
+
+  font-size:19px;
+
+  font-weight:900;
+
+}
+
+
+.fieldSub{
+
+  margin-top:6px;
+
+  color:#616d80;
+
+  font-size:9px;
+
+  line-height:1.4;
+
+}
+
+
+/* =========================================================
+   RUN BUTTON
+========================================================= */
+
+.runButton{
+
+  width:100%;
+
+  margin-top:15px;
+
+  padding:18px;
+
+  border:0;
+
+  border-radius:20px;
+
+  background:var(--gold);
+
+  color:#151007;
+
+  font-size:16px;
+
+  font-weight:950;
+
+  cursor:pointer;
+
+}
+
+
+.runButton:disabled{
+
+  opacity:.5;
+
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.status{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:10px;
+
+  margin-top:15px;
+
+  color:var(--muted);
+
+  font-size:13px;
+
+}
+
+
+.dot{
+
+  width:10px;
+
+  height:10px;
+
+  border-radius:50%;
+
+  background:#ff9b4a;
+
+}
+
+
+.dot.good{
+  background:var(--green);
+}
+
+
+.dot.bad{
+  background:var(--red);
+}
+
+
+/* =========================================================
+   METRICS
+========================================================= */
+
+.metrics{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:11px;
+
+}
+
+
+.metric{
+
+  min-width:0;
+
+  padding:16px;
+
+  border-radius:19px;
+
+  border:1px solid var(--border);
+
+  background:#060d14;
+
+}
+
+
+.metricLabel{
+
+  color:#7d899c;
+
+  font-size:9px;
+
+  font-weight:950;
+
+  letter-spacing:1.5px;
+
+}
+
+
+.metricValue{
+
+  margin-top:9px;
+
+  font-size:23px;
+
+  font-weight:950;
+
+  overflow-wrap:anywhere;
+
+}
+
+
+.metricSub{
+
+  margin-top:5px;
+
+  color:var(--muted);
+
+  font-size:10px;
+
+}
+
+
+.green{
+  color:var(--green);
+}
+
+
+.red{
+  color:var(--red);
+}
+
+
+.gold{
+  color:var(--gold);
+}
+
+
+/* =========================================================
+   EQUITY
+========================================================= */
+
+.chartBox{
+
+  width:100%;
+
+  height:260px;
+
+  margin-top:10px;
+
+  overflow:hidden;
+
+  border-radius:20px;
+
+  border:1px solid var(--border);
+
+  background:#03080d;
+
+}
+
+
+canvas{
+
+  width:100%;
+
+  height:100%;
+
+}
+
+
+/* =========================================================
+   DATA INFO
+========================================================= */
+
+.infoGrid{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:10px;
+
+}
+
+
+.infoBox{
+
+  padding:14px;
+
+  border-radius:17px;
+
+  border:1px solid var(--border);
+
+  background:#050b11;
+
+}
+
+
+.infoLabel{
+
+  color:#728094;
+
+  font-size:8px;
+
+  font-weight:950;
+
+  letter-spacing:1px;
+
+}
+
+
+.infoValue{
+
+  margin-top:6px;
+
+  font-size:12px;
+
+  font-weight:850;
+
+  word-break:break-word;
+
+}
+
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.tableWrap{
+
+  overflow-x:auto;
+
+  border-radius:20px;
+
+  border:1px solid var(--border);
+
+}
+
+
+table{
+
+  width:100%;
+
+  min-width:850px;
+
+  border-collapse:collapse;
+
+  background:#050b11;
+
+}
+
+
+th{
+
+  padding:13px 10px;
+
+  color:#788499;
+
+  font-size:8px;
+
+  letter-spacing:1px;
+
+  text-align:left;
+
+  border-bottom:
+    1px solid var(--border);
+
+}
+
+
+td{
+
+  padding:13px 10px;
+
+  font-size:11px;
+
+  border-bottom:
+    1px solid
+    rgba(255,255,255,.05);
+
+}
+
+
+.buy{
+  color:var(--green);
+  font-weight:900;
+}
+
+
+.sell{
+  color:var(--red);
+  font-weight:900;
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.error{
+
+  display:none;
+
+  margin-top:15px;
+
+  padding:15px;
+
+  border-radius:18px;
+
+  border:
+    1px solid
+    rgba(255,97,119,.25);
+
+  background:
+    rgba(255,97,119,.06);
+
+  color:#ff9aaa;
+
+  font-size:12px;
+
+  line-height:1.5;
+
+}
+
+
+/* =========================================================
+   NOTES
+========================================================= */
+
+.note{
+
+  margin-top:15px;
+
+  padding:15px;
+
+  border-radius:18px;
+
+  border:
+    1px solid
+    rgba(247,200,78,.15);
+
+  background:
+    rgba(247,200,78,.035);
+
+  color:#a69b7b;
+
+  font-size:11px;
+
+  line-height:1.55;
+
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width:500px){
+
+  h1{
+    font-size:34px;
+  }
+
+  .card{
+    padding:18px;
+  }
+
+  .metricValue{
+    font-size:21px;
+  }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="app">
+
+
+<div class="brand">
+  MKAYFX
+</div>
+
+
+<h1>
+  XAU SWEEP<br>
+  BACKTESTER
+</h1>
+
+
+<div class="subtitle">
+
+  Historical XAU/USD liquidity-sweep testing using
+  Twelve Data M5 candles with M15 and H1 confirmation.
+
+</div>
+
+
+<!-- =======================================================
+     SETTINGS
+======================================================= -->
+
+<div class="sectionTitle">
+  Backtest settings
+</div>
+
+
+<div class="card">
+
+  <div class="inputs">
+
+
+    <div class="field">
+
+      <label>
+        DAYS
+      </label>
+
+      <input
+        id="days"
+        type="number"
+        value="30"
+        min="5"
+        max="90"
+      >
+
+      <div class="fieldSub">
+        historical calendar days
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        START BALANCE
+      </label>
+
+      <input
+        id="balance"
+        type="number"
+        value="200"
+      >
+
+      <div class="fieldSub">
+        account starting value
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        RISK %
+      </label>
+
+      <input
+        id="risk"
+        type="number"
+        value="1"
+        step="0.1"
+      >
+
+      <div class="fieldSub">
+        risk per trade
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        MIN SCORE
+      </label>
+
+      <input
+        id="minScore"
+        type="number"
+        value="70"
+      >
+
+      <div class="fieldSub">
+        lower = more trades
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        TP1 R
+      </label>
+
+      <input
+        id="tp1R"
+        type="number"
+        value="1.5"
+        step="0.1"
+      >
+
+      <div class="fieldSub">
+        first 50% exit
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        TP2 R
+      </label>
+
+      <input
+        id="tp2R"
+        type="number"
+        value="2.5"
+        step="0.1"
+      >
+
+      <div class="fieldSub">
+        second 50% exit
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        SPREAD
+      </label>
+
+      <input
+        id="spread"
+        type="number"
+        value="0"
+        step="0.01"
+      >
+
+      <div class="fieldSub">
+        XAU price units
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        SLIPPAGE
+      </label>
+
+      <input
+        id="slippage"
+        type="number"
+        value="0"
+        step="0.01"
+      >
+
+      <div class="fieldSub">
+        per execution estimate
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        MAX HOLD BARS
+      </label>
+
+      <input
+        id="maxHoldBars"
+        type="number"
+        value="72"
+      >
+
+      <div class="fieldSub">
+        72 M5 bars = 6 hours
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        MAX TRADES
+      </label>
+
+      <input
+        id="maxTrades"
+        type="number"
+        value="1000"
+      >
+
+      <div class="fieldSub">
+        safety cap
+      </div>
+
+    </div>
+
+
+  </div>
+
+
+  <button
+    class="runButton"
+    id="runButton"
+  >
+    RUN BACKTEST
+  </button>
+
+
+  <div class="status">
+
+    <div
+      class="dot"
+      id="statusDot"
+    ></div>
+
+    <span id="statusText">
+      Ready
+    </span>
+
+  </div>
+
+
+  <div
+    class="error"
+    id="error"
+  ></div>
+
+
+  <div class="note">
+
+    This is a historical simulation. It uses completed
+    candles and conservative stop-first handling when a
+    candle could theoretically hit both the stop and a
+    target. Real execution can still differ because of
+    spread, slippage, pricing feeds and intrabar movement.
+
+  </div>
+
+</div>
+
+
+<!-- =======================================================
+     RESULTS
+======================================================= -->
+
+<div class="sectionTitle">
+  Results
+</div>
+
+
+<div class="card">
+
+  <div class="metrics">
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        TRADES
+      </div>
+
+      <div
+        class="metricValue"
+        id="trades"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        WIN RATE
+      </div>
+
+      <div
+        class="metricValue"
+        id="winRate"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        PROFIT FACTOR
+      </div>
+
+      <div
+        class="metricValue"
+        id="profitFactor"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        TOTAL R
+      </div>
+
+      <div
+        class="metricValue"
+        id="totalR"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        START BALANCE
+      </div>
+
+      <div
+        class="metricValue"
+        id="startBalance"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        END BALANCE
+      </div>
+
+      <div
+        class="metricValue"
+        id="endBalance"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        RETURN
+      </div>
+
+      <div
+        class="metricValue"
+        id="returnPct"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        MAX DRAWDOWN
+      </div>
+
+      <div
+        class="metricValue"
+        id="drawdown"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        AVG R
+      </div>
+
+      <div
+        class="metricValue"
+        id="averageR"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        MAX LOSING STREAK
+      </div>
+
+      <div
+        class="metricValue"
+        id="lossStreak"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        TP2 HITS
+      </div>
+
+      <div
+        class="metricValue"
+        id="tp2Hits"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="metric">
+
+      <div class="metricLabel">
+        REJECTED SETUPS
+      </div>
+
+      <div
+        class="metricValue"
+        id="rejectedSignals"
+      >
+        —
+      </div>
+
+    </div>
+
+
+  </div>
+
+</div>
+
+
+<!-- =======================================================
+     EQUITY
+======================================================= -->
+
+<div class="sectionTitle">
+  Equity curve
+</div>
+
+
+<div class="card">
+
+  <div class="chartBox">
+
+    <canvas
+      id="equityChart"
+    ></canvas>
+
+  </div>
+
+</div>
+
+
+<!-- =======================================================
+     DATA
+======================================================= -->
+
+<div class="sectionTitle">
+  Backtest data
+</div>
+
+
+<div class="card">
+
+  <div class="infoGrid">
+
+
+    <div class="infoBox">
+
+      <div class="infoLabel">
+        SYMBOL
+      </div>
+
+      <div
+        class="infoValue"
+        id="dataSymbol"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="infoBox">
+
+      <div class="infoLabel">
+        TIMEFRAME
+      </div>
+
+      <div
+        class="infoValue"
+        id="dataInterval"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="infoBox">
+
+      <div class="infoLabel">
+        CANDLES
+      </div>
+
+      <div
+        class="infoValue"
+        id="dataBars"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="infoBox">
+
+      <div class="infoLabel">
+        RUNTIME
+      </div>
+
+      <div
+        class="infoValue"
+        id="runtime"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="infoBox">
+
+      <div class="infoLabel">
+        FROM
+      </div>
+
+      <div
+        class="infoValue"
+        id="dataFrom"
+      >
+        —
+      </div>
+
+    </div>
+
+
+    <div class="infoBox">
+
+      <div class="infoLabel">
+        TO
+      </div>
+
+      <div
+        class="infoValue"
+        id="dataTo"
+      >
+        —
+      </div>
+
+    </div>
+
+
+  </div>
+
+</div>
+
+
+<!-- =======================================================
+     TRADES
+======================================================= -->
+
+<div class="sectionTitle">
+  Trades
+</div>
+
+
+<div class="tableWrap">
+
+  <table>
+
+    <thead>
+
+      <tr>
+
+        <th>
+          DATE
+        </th>
+
+        <th>
+          SIDE
+        </th>
+
+        <th>
+          LIQUIDITY
+        </th>
+
+        <th>
+          SCORE
+        </th>
+
+        <th>
+          ENTRY
+        </th>
+
+        <th>
+          SL
+        </th>
+
+        <th>
+          TP1
+        </th>
+
+        <th>
+          TP2
+        </th>
+
+        <th>
+          EXIT
+        </th>
+
+        <th>
+          R
+        </th>
+
+        <th>
+          P/L
+        </th>
+
+        <th>
+          BALANCE
+        </th>
+
+      </tr>
+
+    </thead>
+
+
+    <tbody id="tradeRows">
+
+      <tr>
+
+        <td colspan="12">
+          Run a backtest to see trades.
+        </td>
+
+      </tr>
+
+    </tbody>
+
+  </table>
+
+</div>
+
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function el(
+  id
+) {
+
+  return document.getElementById(
+    id
+  );
+
+}
+
+
+function number(
+  value,
+  decimals = 2
+) {
+
+  const n =
+    Number(
+      value
+    );
+
+
+  if (
+    !Number.isFinite(
+      n
+    )
+  ) {
+
+    return "—";
+
+  }
+
+
+  return n.toLocaleString(
+
+    undefined,
+
+    {
+
+      minimumFractionDigits:
+        decimals,
+
+      maximumFractionDigits:
+        decimals
+
+    }
+
+  );
+
+}
+
+
+function signed(
+  value,
+  decimals = 2
+) {
+
+  const n =
+    Number(
+      value
+    );
+
+
+  if (
+    !Number.isFinite(
+      n
+    )
+  ) {
+
+    return "—";
+
+  }
+
+
+  return (
+
+    (
+      n > 0
+        ?
+        "+"
+        :
+        ""
+    )
+
+    +
+
+    n.toFixed(
+      decimals
+    )
+
+  );
+
+}
+
+
+function money(
+  value
+) {
+
+  const n =
+    Number(
+      value
+    );
+
+
+  if (
+    !Number.isFinite(
+      n
+    )
+  ) {
+
+    return "—";
+
+  }
+
+
+  return (
+
+    "R"
+
+    +
+
+    n.toLocaleString(
+
+      undefined,
+
+      {
+
+        minimumFractionDigits:
+          2,
+
+        maximumFractionDigits:
+          2
+
+      }
+
+    )
+
+  );
+
+}
+
+
+function escapeHtml(
+  value
+) {
+
+  return String(
+    value ??
+    ""
+  )
+
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+
+    .replace(
+      /</g,
+      "&lt;"
+    )
+
+    .replace(
+      />/g,
+      "&gt;"
+    )
+
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+
+    .replace(
+      /'/g,
+      "&#039;"
+    );
+
+}
+
+
+/* =========================================================
+   RUN
+========================================================= */
+
+el(
+  "runButton"
+)
+  .addEventListener(
+    "click",
+    runBacktest
+  );
+
+
+async function runBacktest() {
+
+  const button =
+    el(
+      "runButton"
+    );
+
+
+  const error =
+    el(
+      "error"
+    );
+
+
+  error.style.display =
+    "none";
+
+
+  button.disabled =
+    true;
+
+
+  button.textContent =
+    "RUNNING BACKTEST...";
+
+
+  el(
+    "statusDot"
+  ).className =
+    "dot";
+
+
+  el(
+    "statusText"
+  ).textContent =
+    "Downloading historical candles and simulating trades...";
+
+
+  const params =
+    new URLSearchParams({
+
+      days:
+        el(
+          "days"
+        ).value,
+
+      balance:
+        el(
+          "balance"
+        ).value,
+
+      risk:
+        el(
+          "risk"
+        ).value,
+
+      minScore:
+        el(
+          "minScore"
+        ).value,
+
+      tp1R:
+        el(
+          "tp1R"
+        ).value,
+
+      tp2R:
+        el(
+          "tp2R"
+        ).value,
+
+      spread:
+        el(
+          "spread"
+        ).value,
+
+      slippage:
+        el(
+          "slippage"
+        ).value,
+
+      maxHoldBars:
+        el(
+          "maxHoldBars"
+        ).value,
+
+      maxTrades:
+        el(
+          "maxTrades"
+        ).value
+
+    });
+
+
+  try {
+
+    const response =
+      await fetch(
+
+        `/api/backtest?${params.toString()}&t=${Date.now()}`,
+
+        {
+
+          cache:
+            "no-store"
+
+        }
+
+      );
+
+
+    const raw =
+      await response.text();
+
+
+    let data;
+
+
+    try {
+
+      data =
+        JSON.parse(
+          raw
+        );
+
+    }
+
+    catch (
+      jsonError
+    ) {
+
+      throw new Error(
+
+        `Backend did not return JSON. HTTP ${response.status}`
+
+      );
+
+    }
+
+
+    if (
+      !response.ok
+
+      ||
+
+      data.ok !==
+      true
+    ) {
+
+      throw new Error(
+
+        data.error
+
+        ||
+
+        `HTTP ${response.status}`
+
+      );
+
+    }
+
+
+    renderResults(
+      data
+    );
+
+
+    el(
+      "statusDot"
+    ).className =
+      "dot good";
+
+
+    el(
+      "statusText"
+    ).textContent =
+
+      `Completed · ${data.metrics.trades} trades · ${data.runtimeMs} ms server runtime`;
+
+
+  } catch (
+    err
+  ) {
+
+    error.style.display =
+      "block";
+
+
+    error.textContent =
+      err.message;
+
+
+    el(
+      "statusDot"
+    ).className =
+      "dot bad";
+
+
+    el(
+      "statusText"
+    ).textContent =
+      "Backtest failed";
+
+  }
+
+  finally {
+
+    button.disabled =
+      false;
+
+
+    button.textContent =
+      "RUN BACKTEST";
+
+  }
+
+}
+
+
+/* =========================================================
+   RESULTS
+========================================================= */
+
+function renderResults(
+  data
+) {
+
+  const m =
+    data.metrics;
+
+
+  setMetric(
+
+    "trades",
+
+    m.trades
+
+  );
+
+
+  setMetric(
+
+    "winRate",
+
+    `${number(
+      m.winRate,
+      2
+    )}%`,
+
+    m.winRate >= 50
+      ?
+      "green"
+      :
+      ""
+
+  );
+
+
+  setMetric(
+
+    "profitFactor",
+
+    number(
+      m.profitFactor,
+      2
+    ),
+
+    m.profitFactor >= 1
+      ?
+      "green"
+      :
+      "red"
+
+  );
+
+
+  setMetric(
+
+    "totalR",
+
+    `${signed(
+      m.totalR,
+      2
+    )}R`,
+
+    m.totalR >= 0
+      ?
+      "green"
+      :
+      "red"
+
+  );
+
+
+  setMetric(
+
+    "startBalance",
+
+    money(
+      m.initialBalance
+    )
+
+  );
+
+
+  setMetric(
+
+    "endBalance",
+
+    money(
+      m.endingBalance
+    ),
+
+    m.endingBalance >=
+    m.initialBalance
+      ?
+      "green"
+      :
+      "red"
+
+  );
+
+
+  setMetric(
+
+    "returnPct",
+
+    `${signed(
+      m.returnPct,
+      2
+    )}%`,
+
+    m.returnPct >= 0
+      ?
+      "green"
+      :
+      "red"
+
+  );
+
+
+  setMetric(
+
+    "drawdown",
+
+    `${number(
+      m.maxDrawdownPct,
+      2
+    )}%`,
+
+    m.maxDrawdownPct <= 10
+      ?
+      ""
+      :
+      "red"
+
+  );
+
+
+  setMetric(
+
+    "averageR",
+
+    `${signed(
+      m.averageR,
+      3
+    )}R`
+
+  );
+
+
+  setMetric(
+
+    "lossStreak",
+
+    m.maxConsecutiveLosses
+
+  );
+
+
+  setMetric(
+
+    "tp2Hits",
+
+    m.tp2Hits
+
+  );
+
+
+  setMetric(
+
+    "rejectedSignals",
+
+    m.rejectedSignals
+
+  );
+
+
+  /* =====================================================
+     DATA
+  ===================================================== */
+
+  el(
+    "dataSymbol"
+  ).textContent =
+    data.symbol;
+
+
+  el(
+    "dataInterval"
+  ).textContent =
+    data.interval;
+
+
+  el(
+    "dataBars"
+  ).textContent =
+    number(
+      data.data.bars,
+      0
+    );
+
+
+  el(
+    "runtime"
+  ).textContent =
+    `${data.runtimeMs} ms`;
+
+
+  el(
+    "dataFrom"
+  ).textContent =
+    new Date(
+      data.data.from
+    )
+      .toLocaleString();
+
+
+  el(
+    "dataTo"
+  ).textContent =
+    new Date(
+      data.data.to
+    )
+      .toLocaleString();
+
+
+  renderTrades(
+    data.trades
+  );
+
+
+  drawEquity(
+    data.equityCurve
+  );
+
+}
+
+
+/* =========================================================
+   METRIC
+========================================================= */
+
+function setMetric(
+  id,
+  value,
+  className = ""
+) {
+
+  const element =
+    el(
+      id
+    );
+
+
+  element.textContent =
+    value;
+
+
+  element.className =
+    "metricValue";
+
+
+  if (
+    className
+  ) {
+
+    element.classList.add(
+      className
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   TRADES
+========================================================= */
+
+function renderTrades(
+  trades
+) {
+
+  const body =
+    el(
+      "tradeRows"
+    );
+
+
+  if (
+    !Array.isArray(
+      trades
+    )
+
+    ||
+
+    !trades.length
+  ) {
+
+    body.innerHTML = `
+
+      <tr>
+
+        <td colspan="12">
+
+          No trades met the current rules.
+          Try reducing Minimum Score.
+
+        </td>
+
+      </tr>
+
+    `;
+
+
+    return;
+
+  }
+
+
+  body.innerHTML =
+    trades
+      .map(
+        trade => `
+
+          <tr>
+
+            <td>
+              ${escapeHtml(
+                new Date(
+                  trade.entryTime
+                )
+                  .toLocaleString()
+              )}
+            </td>
+
+
+            <td
+              class="${trade.direction === "BUY" ? "buy" : "sell"}"
+            >
+              ${trade.direction}
+            </td>
+
+
+            <td>
+              ${escapeHtml(trade.liquidity)}
+            </td>
+
+
+            <td>
+              ${number(trade.score,1)}
+            </td>
+
+
+            <td>
+              ${number(trade.entry,2)}
+            </td>
+
+
+            <td>
+              ${number(trade.stopLoss,2)}
+            </td>
+
+
+            <td>
+              ${number(trade.tp1,2)}
+            </td>
+
+
+            <td>
+              ${number(trade.tp2,2)}
+            </td>
+
+
+            <td>
+              ${escapeHtml(trade.exitReason)}
+            </td>
+
+
+            <td
+              class="${trade.r >= 0 ? "green" : "red"}"
+            >
+              ${signed(trade.r,2)}R
+            </td>
+
+
+            <td
+              class="${trade.pnl >= 0 ? "green" : "red"}"
+            >
+              ${money(trade.pnl)}
+            </td>
+
+
+            <td>
+              ${money(trade.endingBalance)}
+            </td>
+
+          </tr>
+
+        `
+      )
+      .join(
+        ""
+      );
+
+}
+
+
+/* =========================================================
+   EQUITY CHART
+========================================================= */
+
+function drawEquity(
+  points
+) {
+
+  const canvas =
+    el(
+      "equityChart"
+    );
+
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+
+  const ratio =
+    window.devicePixelRatio
+    ||
+    1;
+
+
+  canvas.width =
+    Math.floor(
+      rect.width *
+      ratio
+    );
+
+
+  canvas.height =
+    Math.floor(
+      rect.height *
+      ratio
+    );
+
+
+  const ctx =
+    canvas.getContext(
+      "2d"
+    );
+
+
+  ctx.scale(
+    ratio,
+    ratio
+  );
+
+
+  const width =
+    rect.width;
+
+
+  const height =
+    rect.height;
+
+
+  ctx.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  if (
+    !points
+
+    ||
+
+    points.length <
+    2
+  ) {
+
+    ctx.font =
+      "14px -apple-system";
+
+
+    ctx.fillStyle =
+      "#7e899c";
+
+
+    ctx.fillText(
+
+      "Not enough trades for equity curve",
+
+      20,
+
+      35
+
+    );
+
+
+    return;
+
+  }
+
+
+  const padding =
+    20;
+
+
+  const balances =
+    points.map(
+      point =>
+        Number(
+          point.balance
+        )
+    );
+
+
+  let minimum =
+    Math.min(
+      ...balances
+    );
+
+
+  let maximum =
+    Math.max(
+      ...balances
+    );
+
+
+  if (
+    maximum ===
+    minimum
+  ) {
+
+    maximum +=
+      1;
+
+
+    minimum -=
+      1;
+
+  }
+
+
+  const x = (
+    index
+  ) =>
+
+    padding
+
+    +
+
+    (
+      index /
+      (
+        points.length -
+        1
+      )
+    )
+
+    *
+
+    (
+      width -
+      padding *
+      2
+    );
+
+
+  const y = (
+    balance
+  ) =>
+
+    height
+
+    -
+
+    padding
+
+    -
+
+    (
+      (
+        balance -
+        minimum
+      )
+
+      /
+
+      (
+        maximum -
+        minimum
+      )
+    )
+
+    *
+
+    (
+      height -
+      padding *
+      2
+    );
+
+
+  ctx.beginPath();
+
+
+  ctx.lineWidth =
+    2;
+
+
+  ctx.strokeStyle =
+    "#f7c84e";
+
+
+  points.forEach(
+    (
+      point,
+      index
+    ) => {
+
+      const px =
+        x(
+          index
+        );
+
+
+      const py =
+        y(
+          point.balance
+        );
+
+
+      if (
+        index === 0
+      ) {
+
+        ctx.moveTo(
+          px,
+          py
+        );
+
+      }
+
+      else {
+
+        ctx.lineTo(
+          px,
+          py
+        );
+
+      }
+
+    }
+  );
+
+
+  ctx.stroke();
+
+
+  ctx.fillStyle =
+    "#7e899c";
+
+
+  ctx.font =
+    "11px -apple-system";
+
+
+  ctx.fillText(
+
+    money(
+      maximum
+    ),
+
+    8,
+
+    14
+
+  );
+
+
+  ctx.fillText(
+
+    money(
+      minimum
+    ),
+
+    8,
+
+    height -
+    7
+
+  );
+
+}
+
+
+/* =========================================================
+   REDRAW CHART ON ORIENTATION CHANGE
+========================================================= */
+
+let lastEquity =
+  null;
+
+
+const originalDraw =
+  drawEquity;
+
+
+window.addEventListener(
+  "resize",
+  () => {
+
+    if (
+      lastEquity
+    ) {
+
+      originalDraw(
+        lastEquity
+      );
+
+    }
+
+  }
+);
+
+
+/*
+  Wrap draw function so latest data
+  can be redrawn after iPhone rotation.
+*/
+
+drawEquity =
+  function(
+    points
+  ) {
+
+    lastEquity =
+      points;
+
+
+    originalDraw(
+      points
+    );
+
+  };
+
+</script>
+
+</body>
+
+</html>
