@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
@@ -13,391 +12,381 @@
 
 <meta
   name="theme-color"
-  content="#030609"
+  content="#050607"
 >
 
-<title>MKAYFX RAID BACKTESTER</title>
-
+<title>
+  MKAYFX Liquidity Backtester
+</title>
 
 <style>
 
 *{
   box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
 }
 
 :root{
-
-  --bg:#030609;
-  --panel:#080e15;
-  --panel2:#0b131d;
-  --border:rgba(255,255,255,.08);
-
-  --text:#f4f7fa;
-  --muted:#798696;
-
-  --green:#31e6a1;
-  --red:#ff5d73;
-  --gold:#f5c95f;
-  --blue:#7295ff;
-  --orange:#ff9f43;
-
+  --bg:#050607;
+  --panel:#0b0e12;
+  --panel2:#10141a;
+  --line:rgba(255,255,255,.075);
+  --line2:rgba(255,255,255,.13);
+  --text:#f5f7fa;
+  --muted:#717b89;
+  --gold:#f2c75c;
+  --green:#36dfa1;
+  --red:#ff6076;
+  --blue:#5caaff;
 }
 
 body{
-
   margin:0;
 
   min-height:100vh;
 
-  background:
-    radial-gradient(
-      circle at top,
-      #0b1521 0,
-      #030609 42%
-    );
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    Arial,
+    sans-serif;
 
   color:var(--text);
 
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  background:
+    radial-gradient(
+      circle at 10% -10%,
+      rgba(242,199,92,.12),
+      transparent 27%
+    ),
+    radial-gradient(
+      circle at 100% 40%,
+      rgba(92,170,255,.055),
+      transparent 25%
+    ),
+    var(--bg);
+}
 
+button,
+input,
+select{
+  font:inherit;
 }
 
 .app{
-
-  width:min(
-    1500px,
-    100%
-  );
-
+  width:min(1200px,100%);
   margin:auto;
 
   padding:
-    18px;
-
+    calc(10px + env(safe-area-inset-top))
+    12px
+    calc(30px + env(safe-area-inset-bottom));
 }
 
-.header{
-
+.topbar{
   display:flex;
-
-  justify-content:
-    space-between;
-
-  align-items:
-    center;
+  align-items:center;
+  justify-content:space-between;
 
   gap:12px;
 
-  margin-bottom:
-    18px;
+  padding:11px 13px;
 
+  border:1px solid var(--line);
+  border-radius:18px;
+
+  background:rgba(7,9,12,.90);
+
+  position:sticky;
+  top:6px;
+  z-index:50;
+
+  backdrop-filter:blur(22px);
 }
 
 .brand{
-
-  font-size:
-    21px;
-
-  font-weight:
-    900;
-
-  letter-spacing:
-    -.7px;
-
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
 
-.brand span{
-
-  color:
-    var(--gold);
-
-}
-
-.sub{
-
-  color:
-    var(--muted);
-
-  font-size:
-    12px;
-
-  margin-top:
-    4px;
-
-}
-
-.status{
-
-  padding:
-    8px 11px;
-
-  border:
-    1px solid var(--border);
-
-  border-radius:
-    999px;
-
-  color:
-    var(--muted);
-
-  font-size:
-    11px;
-
-  white-space:
-    nowrap;
-
-}
-
-.grid{
+.logo{
+  width:42px;
+  height:42px;
 
   display:grid;
+  place-items:center;
 
-  grid-template-columns:
-    340px 1fr;
+  border-radius:13px;
 
-  gap:
-    14px;
+  color:#080808;
 
-}
-
-.card{
+  font-size:11px;
+  font-weight:950;
 
   background:
     linear-gradient(
-      180deg,
-      rgba(13,22,33,.95),
-      rgba(7,12,19,.95)
+      135deg,
+      #ffe78d,
+      #c38b25
     );
-
-  border:
-    1px solid var(--border);
-
-  border-radius:
-    18px;
-
-  padding:
-    15px;
-
-  box-shadow:
-    0 20px 50px rgba(0,0,0,.2);
-
 }
 
-.title{
+.brand h1{
+  margin:0;
 
-  font-size:
-    12px;
+  font-size:12px;
+  letter-spacing:.12em;
+}
 
-  font-weight:
-    900;
+.brand small{
+  display:block;
 
-  text-transform:
-    uppercase;
+  margin-top:3px;
 
-  letter-spacing:
-    1px;
+  color:var(--muted);
 
-  margin-bottom:
-    13px;
+  font-size:6px;
+  letter-spacing:.12em;
+}
 
+.status{
+  padding:7px 9px;
+
+  border:1px solid var(--line);
+  border-radius:999px;
+
+  color:var(--green);
+
+  font-size:7px;
+  font-weight:900;
+}
+
+.hero{
+  margin-top:10px;
+
+  padding:18px;
+
+  border:1px solid var(--line);
+  border-radius:22px;
+
+  background:
+    radial-gradient(
+      circle at 95% 0,
+      rgba(242,199,92,.1),
+      transparent 32%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(17,20,26,.96),
+      rgba(8,10,13,.96)
+    );
+}
+
+.kicker{
+  color:var(--gold);
+
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.15em;
+}
+
+.hero h2{
+  margin:
+    8px 0
+    3px;
+
+  font-size:30px;
+  letter-spacing:-.04em;
+}
+
+.hero p{
+  margin:0;
+
+  max-width:650px;
+
+  color:var(--muted);
+
+  font-size:8px;
+  line-height:1.6;
 }
 
 .settings{
-
-  display:grid;
-
-  gap:
-    11px;
-
-}
-
-.field{
-
-  display:grid;
-
-  gap:
-    6px;
-
-}
-
-label{
-
-  color:
-    var(--muted);
-
-  font-size:
-    11px;
-
-  font-weight:
-    700;
-
-}
-
-input,
-select{
-
-  width:
-    100%;
-
-  border:
-    1px solid var(--border);
-
-  border-radius:
-    11px;
-
-  background:
-    #060b11;
-
-  color:
-    var(--text);
-
-  padding:
-    11px;
-
-  outline:
-    none;
-
-  font-size:
-    14px;
-
-}
-
-input:focus,
-select:focus{
-
-  border-color:
-    rgba(245,201,95,.5);
-
-}
-
-.row2{
-
   display:grid;
 
   grid-template-columns:
-    1fr 1fr;
+    repeat(6,minmax(0,1fr));
 
-  gap:
-    9px;
+  gap:7px;
 
+  margin-top:12px;
 }
 
-button{
+.field{
+  padding:9px;
 
-  width:
-    100%;
+  border:1px solid var(--line);
+  border-radius:11px;
 
-  border:
-    0;
+  background:rgba(255,255,255,.018);
+}
 
-  border-radius:
-    12px;
+.field label{
+  display:block;
 
-  padding:
-    13px;
+  margin-bottom:6px;
 
-  font-weight:
-    900;
+  color:var(--muted);
 
-  font-size:
-    13px;
+  font-size:6px;
+  font-weight:900;
+}
+
+.field input,
+.field select{
+  width:100%;
+
+  border:0;
+  outline:none;
+
+  color:var(--text);
+
+  background:transparent;
+
+  font-size:11px;
+  font-weight:800;
+}
+
+.runRow{
+  display:flex;
+  gap:7px;
+
+  margin-top:10px;
+}
+
+.runBtn{
+  flex:1;
+
+  padding:13px 15px;
+
+  border:0;
+  border-radius:12px;
+
+  color:#080808;
 
   background:
-    var(--gold);
+    linear-gradient(
+      135deg,
+      #ffe383,
+      #ca9022
+    );
 
-  color:
-    #151000;
-
-  margin-top:
-    5px;
-
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.08em;
 }
 
-button:disabled{
+.secondaryBtn{
+  padding:13px 15px;
 
-  opacity:
-    .5;
+  border:1px solid var(--line);
+  border-radius:12px;
 
+  color:var(--text);
+  background:rgba(255,255,255,.025);
+
+  font-size:8px;
+  font-weight:900;
+}
+
+.error{
+  display:none;
+
+  margin-top:8px;
+  padding:10px;
+
+  border:1px solid rgba(255,96,118,.2);
+  border-radius:10px;
+
+  color:#ff9baa;
+
+  background:rgba(255,96,118,.06);
+
+  font-size:7px;
+}
+
+.error.show{
+  display:block;
 }
 
 .results{
-
-  display:grid;
-
-  gap:
-    14px;
-
+  display:none;
 }
 
-.metrics{
+.results.show{
+  display:block;
+}
 
+.summaryGrid{
   display:grid;
 
   grid-template-columns:
     repeat(6,1fr);
 
-  gap:
-    9px;
+  gap:7px;
 
+  margin-top:9px;
 }
 
-.metric{
+.stat{
+  min-height:91px;
 
-  border:
-    1px solid var(--border);
+  padding:12px;
+
+  border:1px solid var(--line);
+  border-radius:14px;
 
   background:
-    #060b11;
-
-  border-radius:
-    14px;
-
-  padding:
-    12px;
-
-  min-height:
-    78px;
-
+    linear-gradient(
+      145deg,
+      rgba(17,20,26,.9),
+      rgba(8,10,13,.9)
+    );
 }
 
-.metricName{
+.stat label{
+  color:var(--muted);
 
-  color:
-    var(--muted);
-
-  font-size:
-    10px;
-
-  text-transform:
-    uppercase;
-
-  font-weight:
-    800;
-
+  font-size:6px;
+  font-weight:900;
 }
 
-.metricValue{
+.stat strong{
+  display:block;
 
-  font-size:
-    22px;
+  margin-top:10px;
 
-  font-weight:
-    900;
-
-  margin-top:
-    7px;
-
+  font-size:22px;
+  letter-spacing:-.04em;
 }
 
-.green{
+.stat span{
+  display:block;
+
+  margin-top:4px;
+
+  color:var(--muted);
+
+  font-size:6px;
+}
+
+.good{
   color:var(--green);
 }
 
-.red{
+.bad{
   color:var(--red);
 }
 
@@ -405,100 +394,141 @@ button:disabled{
   color:var(--gold);
 }
 
-.blue{
-  color:var(--blue);
+.card{
+  margin-top:9px;
+  padding:14px;
+
+  border:1px solid var(--line);
+  border-radius:17px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(16,19,25,.93),
+      rgba(7,9,12,.93)
+    );
 }
 
-.tables{
+.cardHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
 
+  gap:10px;
+
+  margin-bottom:11px;
+}
+
+.cardTitle{
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.08em;
+}
+
+.cardSub{
+  margin-top:3px;
+
+  color:var(--muted);
+
+  font-size:6px;
+}
+
+.funnel{
   display:grid;
 
   grid-template-columns:
-    1fr 1fr;
+    repeat(5,1fr);
 
-  gap:
-    12px;
+  gap:6px;
+}
 
+.funnelBox{
+  padding:11px;
+
+  border:1px solid var(--line);
+  border-radius:11px;
+
+  background:rgba(255,255,255,.015);
+}
+
+.funnelBox label{
+  display:block;
+
+  color:var(--muted);
+
+  font-size:6px;
+}
+
+.funnelBox strong{
+  display:block;
+
+  margin-top:7px;
+
+  font-size:15px;
+}
+
+.chart{
+  position:relative;
+
+  height:240px;
+
+  overflow:hidden;
+
+  border:1px solid rgba(255,255,255,.04);
+  border-radius:13px;
+
+  background:#07090c;
+}
+
+canvas{
+  width:100%;
+  height:100%;
+  display:block;
 }
 
 .tableWrap{
-
   overflow:auto;
-
+  -webkit-overflow-scrolling:touch;
 }
 
 table{
+  width:100%;
+  min-width:920px;
 
-  width:
-    100%;
+  border-collapse:collapse;
 
-  border-collapse:
-    collapse;
-
-  min-width:
-    520px;
-
-}
-
-th,
-td{
-
-  padding:
-    10px 8px;
-
-  border-bottom:
-    1px solid var(--border);
-
-  text-align:
-    left;
-
-  font-size:
-    11px;
-
+  font-size:7px;
 }
 
 th{
+  padding:8px;
 
-  color:
-    var(--muted);
+  color:var(--muted);
 
-  text-transform:
-    uppercase;
+  text-align:left;
 
-  font-size:
-    9px;
+  font-size:6px;
+  letter-spacing:.06em;
 
+  border-bottom:1px solid var(--line);
 }
 
-.badge{
+td{
+  padding:9px 8px;
 
-  display:inline-flex;
+  border-bottom:1px solid rgba(255,255,255,.035);
 
-  align-items:center;
-
-  border-radius:
-    999px;
-
-  padding:
-    4px 7px;
-
-  border:
-    1px solid var(--border);
-
-  font-size:
-    9px;
-
-  font-weight:
-    900;
-
+  white-space:nowrap;
 }
 
 .buy{
   color:var(--green);
+  font-weight:900;
 }
 
 .sell{
   color:var(--red);
+  font-weight:900;
 }
 
 .win{
@@ -509,1353 +539,1156 @@ th{
   color:var(--red);
 }
 
-.chart{
-
-  height:
-    220px;
-
-  position:
-    relative;
-
-  border:
-    1px solid var(--border);
-
-  border-radius:
-    14px;
-
-  overflow:
-    hidden;
-
-  background:
-    #05090e;
-
-}
-
-canvas{
-
-  width:
-    100%;
-
-  height:
-    100%;
-
-}
-
 .empty{
+  padding:30px;
 
-  color:
-    var(--muted);
+  text-align:center;
 
-  text-align:
-    center;
+  color:var(--muted);
 
-  padding:
-    60px 20px;
-
+  font-size:8px;
 }
 
-.note{
+.loader{
+  display:none;
 
-  color:
-    var(--muted);
+  position:fixed;
+  inset:0;
 
-  font-size:
-    10px;
+  z-index:100;
 
-  line-height:
-    1.6;
+  place-items:center;
 
+  background:rgba(4,5,7,.78);
+
+  backdrop-filter:blur(12px);
 }
 
-@media(max-width:1000px){
+.loader.show{
+  display:grid;
+}
 
-  .grid{
-    grid-template-columns:1fr;
+.loaderBox{
+  width:min(290px,calc(100% - 35px));
+
+  padding:22px;
+
+  border:1px solid var(--line);
+  border-radius:18px;
+
+  text-align:center;
+
+  background:#0d1015;
+}
+
+.spinner{
+  width:42px;
+  height:42px;
+
+  margin:auto;
+
+  border-radius:50%;
+
+  border:2px solid rgba(242,199,92,.12);
+  border-top-color:var(--gold);
+
+  animation:spin .8s linear infinite;
+}
+
+@keyframes spin{
+  to{
+    transform:rotate(360deg);
   }
+}
 
-  .metrics{
+.loaderText{
+  margin-top:12px;
+
+  font-size:8px;
+  font-weight:900;
+}
+
+@media(max-width:850px){
+
+  .settings{
     grid-template-columns:
       repeat(3,1fr);
   }
 
-}
-
-@media(max-width:600px){
-
-  .app{
-    padding:11px;
+  .summaryGrid{
+    grid-template-columns:
+      repeat(3,1fr);
   }
 
-  .metrics{
+  .funnel{
+    grid-template-columns:
+      repeat(2,1fr);
+  }
+}
+
+@media(max-width:480px){
+
+  .settings{
     grid-template-columns:
       repeat(2,1fr);
   }
 
-  .tables{
+  .summaryGrid{
     grid-template-columns:
-      1fr;
+      repeat(2,1fr);
   }
 
-  .header{
-    align-items:flex-start;
+  .hero h2{
+    font-size:26px;
   }
-
 }
 
 </style>
 
 </head>
 
-
 <body>
+
+<div
+  class="loader"
+  id="loader"
+>
+
+  <div class="loaderBox">
+
+    <div class="spinner"></div>
+
+    <div class="loaderText">
+      BACKTESTING LIQUIDITY ENGINE…
+    </div>
+
+  </div>
+
+</div>
 
 <div class="app">
 
+<header class="topbar">
 
-<div class="header">
+  <div class="brand">
 
-  <div>
-
-    <div class="brand">
-      MKAYFX <span>RAID LAB</span>
+    <div class="logo">
+      MK
     </div>
 
-    <div class="sub">
-      XAU/USD · API 4 · Historical Liquidity Backtester
+    <div>
+
+      <h1>
+        MKAYFX
+      </h1>
+
+      <small>
+        GOLD LIQUIDITY BACKTESTER
+      </small>
+
     </div>
 
   </div>
 
+  <div class="status">
+    HISTORICAL
+  </div>
+
+</header>
+
+<section class="hero">
+
+  <div class="kicker">
+    XAU/USD · LIQUIDITY RESEARCH ENGINE
+  </div>
+
+  <h2>
+    Raid Strategy Backtester
+  </h2>
+
+  <p>
+    Reconstructs liquidity using historical candles only.
+    A trade is tested after a qualifying liquidity raid and rejection.
+    Entries occur on the next completed M5 candle open.
+  </p>
+
+  <div class="settings">
+
+    <div class="field">
+
+      <label>
+        MIN RAID SCORE
+      </label>
+
+      <input
+        type="number"
+        id="score"
+        value="70"
+        min="1"
+        max="100"
+      >
+
+    </div>
+
+    <div class="field">
+
+      <label>
+        TAKE PROFIT R
+      </label>
+
+      <input
+        type="number"
+        id="rr"
+        value="1.5"
+        min=".25"
+        max="10"
+        step=".25"
+      >
+
+    </div>
+
+    <div class="field">
+
+      <label>
+        SL ATR BUFFER
+      </label>
+
+      <input
+        type="number"
+        id="slAtr"
+        value=".20"
+        min=".05"
+        max="3"
+        step=".05"
+      >
+
+    </div>
+
+    <div class="field">
+
+      <label>
+        TEST BARS
+      </label>
+
+      <select id="bars">
+
+        <option value="1000">
+          1,000 M5
+        </option>
+
+        <option value="2000">
+          2,000 M5
+        </option>
+
+        <option
+          value="4000"
+          selected
+        >
+          4,000 M5
+        </option>
+
+        <option value="5000">
+          MAX 5,000
+        </option>
+
+      </select>
+
+    </div>
+
+    <div class="field">
+
+      <label>
+        STRUCTURE FILTER
+      </label>
+
+      <select id="structure">
+
+        <option
+          value="1"
+          selected
+        >
+          ON
+        </option>
+
+        <option value="0">
+          OFF
+        </option>
+
+      </select>
+
+    </div>
+
+    <div class="field">
+
+      <label>
+        MAX TRADE BARS
+      </label>
+
+      <input
+        type="number"
+        id="maxBars"
+        value="72"
+        min="1"
+        max="1000"
+      >
+
+    </div>
+
+  </div>
+
+  <div class="runRow">
+
+    <button
+      class="runBtn"
+      onclick="runBacktest(true)"
+    >
+      RUN BACKTEST
+    </button>
+
+    <button
+      class="secondaryBtn"
+      onclick="resetDefaults()"
+    >
+      RESET
+    </button>
+
+  </div>
 
   <div
-    class="status"
-    id="status"
-  >
-    READY
+    class="error"
+    id="error"
+  ></div>
+
+</section>
+
+<section
+  class="results"
+  id="results"
+>
+
+<div
+  class="summaryGrid"
+  id="summary"
+></div>
+
+<article class="card">
+
+  <div class="cardHead">
+
+    <div>
+
+      <div class="cardTitle">
+        EQUITY CURVE
+      </div>
+
+      <div class="cardSub">
+        Cumulative result measured in R
+      </div>
+
+    </div>
+
   </div>
 
-</div>
+  <div class="chart">
 
+    <canvas id="equityChart"></canvas>
 
-<div class="grid">
+  </div>
 
+</article>
 
-<!-- SETTINGS -->
+<article class="card">
 
-<div class="card">
+  <div class="cardHead">
 
-<div class="title">
-Strategy Settings
-</div>
+    <div>
 
+      <div class="cardTitle">
+        SIGNAL FUNNEL
+      </div>
 
-<div class="settings">
+      <div class="cardSub">
+        See where potential setups are being filtered
+      </div>
 
+    </div>
 
-<div class="field">
+  </div>
 
-<label>
-Historical M5 bars
-</label>
+  <div
+    class="funnel"
+    id="funnel"
+  ></div>
 
-<select id="outputsize">
+</article>
 
-<option value="1500">
-1,500
-</option>
+<article class="card">
 
-<option value="3000">
-3,000
-</option>
+  <div class="cardHead">
 
-<option
-  value="5000"
-  selected
->
-5,000
-</option>
+    <div>
 
-</select>
+      <div class="cardTitle">
+        BACKTEST DETAILS
+      </div>
 
-</div>
+      <div class="cardSub">
+        Test configuration and historical sample
+      </div>
 
+    </div>
 
-<div class="row2">
+  </div>
 
+  <div
+    class="funnel"
+    id="details"
+  ></div>
 
-<div class="field">
+</article>
 
-<label>
-Min Raid Score
-</label>
+<article class="card">
 
-<input
-  id="minRaidScore"
-  type="number"
-  value="70"
-  min="0"
-  max="100"
->
+  <div class="cardHead">
 
-</div>
+    <div>
 
+      <div class="cardTitle">
+        TRADE LOG
+      </div>
 
-<div class="field">
+      <div class="cardSub">
+        Most recent trades first
+      </div>
 
-<label>
-Max Distance ATR
-</label>
+    </div>
 
-<input
-  id="maxDistanceAtr"
-  type="number"
-  value="2"
-  step=".1"
->
+  </div>
 
-</div>
+  <div class="tableWrap">
 
+    <table>
 
-</div>
+      <thead>
 
+        <tr>
 
-<div class="row2">
+          <th>#</th>
+          <th>TIME</th>
+          <th>SIDE</th>
+          <th>ZONE</th>
+          <th>RAID</th>
+          <th>ENTRY</th>
+          <th>SL</th>
+          <th>TP</th>
+          <th>RESULT</th>
+          <th>R</th>
 
+        </tr>
 
-<div class="field">
+      </thead>
 
-<label>
-Min Liquidity
-</label>
+      <tbody id="tradeRows"></tbody>
 
-<input
-  id="minLiquidityStrength"
-  type="number"
-  value="0"
->
+    </table>
 
-</div>
+  </div>
 
+</article>
 
-<div class="field">
-
-<label>
-Min Quality
-</label>
-
-<input
-  id="minCombinedQuality"
-  type="number"
-  value="0"
->
+</section>
 
 </div>
-
-
-</div>
-
-
-<div class="row2">
-
-
-<div class="field">
-
-<label>
-Stop ATR
-</label>
-
-<input
-  id="stopAtr"
-  type="number"
-  value="1.25"
-  step=".05"
->
-
-</div>
-
-
-<div class="field">
-
-<label>
-Fixed RR
-</label>
-
-<input
-  id="rr"
-  type="number"
-  value="1.5"
-  step=".1"
->
-
-</div>
-
-
-</div>
-
-
-<div class="field">
-
-<label>
-Target Mode
-</label>
-
-<select id="targetMode">
-
-<option
-  value="FIXED_RR"
-  selected
->
-Fixed RR
-</option>
-
-<option value="LIQUIDITY">
-Liquidity Level
-</option>
-
-<option value="SWEEP">
-Projected Sweep
-</option>
-
-</select>
-
-</div>
-
-
-<div class="row2">
-
-
-<div class="field">
-
-<label>
-Starting Balance
-</label>
-
-<input
-  id="startingBalance"
-  type="number"
-  value="10000"
->
-
-</div>
-
-
-<div class="field">
-
-<label>
-Risk %
-</label>
-
-<input
-  id="riskPct"
-  type="number"
-  value="1"
-  step=".1"
->
-
-</div>
-
-
-</div>
-
-
-<div class="row2">
-
-
-<div class="field">
-
-<label>
-Spread $
-</label>
-
-<input
-  id="spread"
-  type="number"
-  value=".20"
-  step=".01"
->
-
-</div>
-
-
-<div class="field">
-
-<label>
-Slippage $
-</label>
-
-<input
-  id="slippage"
-  type="number"
-  value=".05"
-  step=".01"
->
-
-</div>
-
-
-</div>
-
-
-<div class="row2">
-
-
-<div class="field">
-
-<label>
-Cooldown Bars
-</label>
-
-<input
-  id="cooldownBars"
-  type="number"
-  value="3"
->
-
-</div>
-
-
-<div class="field">
-
-<label>
-Trade Side
-</label>
-
-<select id="tradeSide">
-
-<option value="BOTH">
-Both
-</option>
-
-<option value="BUY">
-Buy
-</option>
-
-<option value="SELL">
-Sell
-</option>
-
-</select>
-
-</div>
-
-
-</div>
-
-
-<div class="field">
-
-<label>
-Session
-</label>
-
-<select id="sessionFilter">
-
-<option value="ALL">
-All Sessions
-</option>
-
-<option value="ASIA">
-Asia
-</option>
-
-<option value="LONDON">
-London
-</option>
-
-<option value="NEW_YORK">
-New York
-</option>
-
-<option value="LONDON_NY">
-London + New York
-</option>
-
-</select>
-
-</div>
-
-
-<div class="field">
-
-<label>
-One Trade At A Time
-</label>
-
-<select id="oneTradeAtATime">
-
-<option
-  value="true"
-  selected
->
-Yes
-</option>
-
-<option value="false">
-No — trade every pool
-</option>
-
-</select>
-
-</div>
-
-
-<div class="field">
-
-<label>
-Allow Dormant Pools
-</label>
-
-<select id="allowDormant">
-
-<option
-  value="false"
-  selected
->
-No
-</option>
-
-<option value="true">
-Yes
-</option>
-
-</select>
-
-</div>
-
-
-<div class="field">
-
-<label>
-Same Candle SL + TP
-</label>
-
-<select id="collisionMode">
-
-<option
-  value="SL_FIRST"
-  selected
->
-SL First — Conservative
-</option>
-
-<option value="TP_FIRST">
-TP First — Optimistic
-</option>
-
-</select>
-
-</div>
-
-
-<button id="runBtn">
-RUN BACKTEST
-</button>
-
-
-<div class="note">
-
-Core rule: every eligible liquidity setup with a Raid Score at or above the selected threshold may be traded.
-
-Signals are generated after a completed M5 candle and executed at the next M5 open.
-
-</div>
-
-
-</div>
-
-</div>
-
-
-<!-- RESULTS -->
-
-<div class="results">
-
-
-<div
-  class="card"
-  id="summaryCard"
->
-
-<div class="title">
-Performance
-</div>
-
-<div
-  class="metrics"
-  id="metrics"
->
-
-<div class="empty">
-Run the backtest.
-</div>
-
-</div>
-
-</div>
-
-
-<div class="card">
-
-<div class="title">
-Equity Curve
-</div>
-
-<div class="chart">
-
-<canvas id="equityCanvas"></canvas>
-
-</div>
-
-</div>
-
-
-<div class="tables">
-
-
-<div class="card">
-
-<div class="title">
-Raid Score Performance
-</div>
-
-<div
-  class="tableWrap"
-  id="raidTable"
->
-</div>
-
-</div>
-
-
-<div class="card">
-
-<div class="title">
-Liquidity Type Performance
-</div>
-
-<div
-  class="tableWrap"
-  id="typeTable"
->
-</div>
-
-</div>
-
-
-</div>
-
-
-<div class="tables">
-
-
-<div class="card">
-
-<div class="title">
-Side Performance
-</div>
-
-<div
-  class="tableWrap"
-  id="sideTable"
->
-</div>
-
-</div>
-
-
-<div class="card">
-
-<div class="title">
-Session Performance
-</div>
-
-<div
-  class="tableWrap"
-  id="sessionTable"
->
-</div>
-
-</div>
-
-
-</div>
-
-
-<div class="card">
-
-<div class="title">
-Trades
-</div>
-
-<div
-  class="tableWrap"
-  id="tradesTable"
->
-</div>
-
-</div>
-
-
-</div>
-
-
-</div>
-
-</div>
-
 
 <script>
 
-/* ============================================================
-   ELEMENTS
-============================================================ */
+let LAST_DATA =
+  null;
+
 
 const $ =
   id =>
-    document.getElementById(id);
+    document.getElementById(
+      id
+    );
 
 
-const runBtn =
-  $("runBtn");
+function fmt(
+  value,
+  digits = 2
+) {
+
+  const n =
+    Number(
+      value
+    );
 
 
-const statusEl =
-  $("status");
+  if (
+    !Number.isFinite(
+      n
+    )
+  ) {
+
+    return "—";
+
+  }
 
 
-/* ============================================================
-   RUN
-============================================================ */
-
-runBtn.addEventListener(
-  "click",
-  runBacktest
-);
-
-
-async function runBacktest(){
-
-  runBtn.disabled =
-    true;
+  return n.toLocaleString(
+    undefined,
+    {
+      minimumFractionDigits:
+        digits,
+      maximumFractionDigits:
+        digits
+    }
+  );
+}
 
 
-  runBtn.textContent =
-    "RUNNING...";
+function fmtTime(
+  timestamp
+) {
+
+  const n =
+    Number(
+      timestamp
+    );
 
 
-  statusEl.textContent =
-    "FETCHING API 4";
+  if (
+    !Number.isFinite(
+      n
+    )
+  ) {
+
+    return "—";
+
+  }
 
 
-  try{
+  return new Date(
+    n
+  )
+    .toLocaleString(
+      [],
+      {
+        month:
+          "short",
+        day:
+          "2-digit",
+        hour:
+          "2-digit",
+        minute:
+          "2-digit"
+      }
+    );
+}
+
+
+function resetDefaults() {
+
+  $("score").value =
+    70;
+
+
+  $("rr").value =
+    1.5;
+
+
+  $("slAtr").value =
+    .20;
+
+
+  $("bars").value =
+    4000;
+
+
+  $("structure").value =
+    1;
+
+
+  $("maxBars").value =
+    72;
+
+}
+
+
+async function runBacktest(
+  force = false
+) {
+
+  $("error")
+    .classList
+    .remove(
+      "show"
+    );
+
+
+  $("loader")
+    .classList
+    .add(
+      "show"
+    );
+
+
+  try {
 
     const params =
       new URLSearchParams({
 
-        outputsize:
-          $("outputsize").value,
-
-        minRaidScore:
-          $("minRaidScore").value,
-
-        maxDistanceAtr:
-          $("maxDistanceAtr").value,
-
-        minLiquidityStrength:
-          $("minLiquidityStrength").value,
-
-        minCombinedQuality:
-          $("minCombinedQuality").value,
-
-        stopAtr:
-          $("stopAtr").value,
+        score:
+          $("score").value,
 
         rr:
           $("rr").value,
 
-        startingBalance:
-          $("startingBalance").value,
+        slAtr:
+          $("slAtr").value,
 
-        riskPct:
-          $("riskPct").value,
+        bars:
+          $("bars").value,
 
-        spread:
-          $("spread").value,
+        structure:
+          $("structure").value,
 
-        slippage:
-          $("slippage").value,
+        maxBars:
+          $("maxBars").value,
 
-        cooldownBars:
-          $("cooldownBars").value,
+        oneTrade:
+          "1",
 
-        tradeSide:
-          $("tradeSide").value,
+        force:
+          force
+            ? "1"
+            : "0",
 
-        sessionFilter:
-          $("sessionFilter").value,
-
-        oneTradeAtATime:
-          $("oneTradeAtATime").value,
-
-        allowDormant:
-          $("allowDormant").value,
-
-        collisionMode:
-          $("collisionMode").value,
-
-        targetMode:
-          $("targetMode").value
+        t:
+          Date.now()
 
       });
 
 
     const response =
       await fetch(
+
         `/api/backtest?${params.toString()}`,
+
         {
-          cache:"no-store"
+          cache:
+            "no-store"
         }
+
       );
 
 
-    const data =
-      await response.json();
+    const text =
+      await response.text();
 
 
-    if(
-      !response.ok ||
-      !data.ok
-    ){
+    let data;
+
+
+    try {
+
+      data =
+        JSON.parse(
+          text
+        );
+
+    } catch {
 
       throw new Error(
-        data.error ||
-        "Backtest failed."
+        `Invalid API response: ${text.slice(0,120)}`
       );
 
     }
 
 
-    statusEl.textContent =
-      `${data.barsReceived} BARS · DONE`;
+    if (
+      !response.ok ||
+      data.ok ===
+      false
+    ) {
+
+      throw new Error(
+        data.error ||
+        `HTTP ${response.status}`
+      );
+
+    }
 
 
-    renderAll(data);
-
-  }
-  catch(error){
-
-    console.error(error);
-
-    statusEl.textContent =
-      "ERROR";
+    LAST_DATA =
+      data;
 
 
-    alert(
-      error.message
+    render(
+      data
     );
 
-  }
-  finally{
 
-    runBtn.disabled =
-      false;
+    $("results")
+      .classList
+      .add(
+        "show"
+      );
 
 
-    runBtn.textContent =
-      "RUN BACKTEST";
+  } catch (
+    error
+  ) {
+
+    console.error(
+      error
+    );
+
+
+    $("error")
+      .textContent =
+        error.message;
+
+
+    $("error")
+      .classList
+      .add(
+        "show"
+      );
+
+  } finally {
+
+    $("loader")
+      .classList
+      .remove(
+        "show"
+      );
 
   }
 
 }
 
 
-/* ============================================================
-   RENDER
-============================================================ */
+function render(
+  data
+) {
 
-function renderAll(data){
+  const summary =
+    data.summary;
 
-  renderSummary(
-    data.summary
-  );
 
-  renderStatsTable(
-    "raidTable",
-    data.raidBuckets
-  );
+  const cards = [
 
-  renderStatsTable(
-    "typeTable",
-    data.typeStats
-  );
+    {
+      label:
+        "TRADES",
+      value:
+        summary.trades,
+      sub:
+        "completed trades",
+      cls:
+        "gold"
+    },
 
-  renderStatsTable(
-    "sideTable",
-    data.sideStats
-  );
+    {
+      label:
+        "WIN RATE",
+      value:
+        `${fmt(
+          summary.winRate,
+          1
+        )}%`,
+      sub:
+        `${summary.wins} wins / ${summary.losses} losses`,
+      cls:
+        summary.winRate >=
+        50
+          ? "good"
+          : "bad"
+    },
 
-  renderStatsTable(
-    "sessionTable",
-    data.sessionStats
-  );
+    {
+      label:
+        "NET RESULT",
+      value:
+        `${
+          summary.netR >=
+          0
+            ? "+"
+            : ""
+        }${fmt(
+          summary.netR
+        )}R`,
+      sub:
+        "total strategy R",
+      cls:
+        summary.netR >=
+        0
+          ? "good"
+          : "bad"
+    },
+
+    {
+      label:
+        "PROFIT FACTOR",
+      value:
+        fmt(
+          summary.profitFactor
+        ),
+      sub:
+        "gross profit / gross loss",
+      cls:
+        summary.profitFactor >=
+        1
+          ? "good"
+          : "bad"
+    },
+
+    {
+      label:
+        "MAX DRAWDOWN",
+      value:
+        `${fmt(
+          summary.maxDrawdownR
+        )}R`,
+      sub:
+        "peak-to-trough",
+      cls:
+        "bad"
+    },
+
+    {
+      label:
+        "AVG TRADE",
+      value:
+        `${
+          summary.averageR >=
+          0
+            ? "+"
+            : ""
+        }${fmt(
+          summary.averageR,
+          3
+        )}R`,
+      sub:
+        `${fmt(
+          summary.averageBarsHeld,
+          1
+        )} bars average`,
+      cls:
+        summary.averageR >=
+        0
+          ? "good"
+          : "bad"
+    }
+
+  ];
+
+
+  $("summary")
+    .innerHTML =
+      cards
+
+        .map(
+          card => `
+
+            <div class="stat">
+
+              <label>
+                ${card.label}
+              </label>
+
+              <strong
+                class="${card.cls}"
+              >
+                ${card.value}
+              </strong>
+
+              <span>
+                ${card.sub}
+              </span>
+
+            </div>
+          `
+        )
+
+        .join("");
+
+
+  const funnel =
+    data.funnel;
+
+
+  const funnelRows = [
+
+    [
+      "LIQUIDITY STATES",
+      funnel.liquidityStates
+    ],
+
+    [
+      "SCORE ≥ MIN",
+      funnel.raidScoreQualified
+    ],
+
+    [
+      "SWEEPS",
+      funnel.penetrations
+    ],
+
+    [
+      "REJECTIONS",
+      funnel.rejectedSweeps
+    ],
+
+    [
+      "STRUCTURE PASS",
+      funnel.structurePassed
+    ]
+
+  ];
+
+
+  $("funnel")
+    .innerHTML =
+      funnelRows
+
+        .map(
+          ([label,value]) => `
+
+            <div class="funnelBox">
+
+              <label>
+                ${label}
+              </label>
+
+              <strong>
+                ${value}
+              </strong>
+
+            </div>
+          `
+        )
+
+        .join("");
+
+
+  const details = [
+
+    [
+      "MIN RAID",
+      data.settings.minRaidScore
+    ],
+
+    [
+      "RR",
+      `${data.settings.rr}R`
+    ],
+
+    [
+      "SL BUFFER",
+      `${data.settings.slAtrBuffer} ATR`
+    ],
+
+    [
+      "STRUCTURE",
+      data.settings.requireStructure
+        ? "ON"
+        : "OFF"
+    ],
+
+    [
+      "TESTED BARS",
+      data.settings.testedBars
+    ],
+
+    [
+      "DATA",
+      `${data.data.totalCandles} M5 candles`
+    ]
+
+  ];
+
+
+  $("details")
+    .innerHTML =
+      details
+
+        .map(
+          ([label,value]) => `
+
+            <div class="funnelBox">
+
+              <label>
+                ${label}
+              </label>
+
+              <strong>
+                ${value}
+              </strong>
+
+            </div>
+          `
+        )
+
+        .join("");
+
 
   renderTrades(
     data.trades
   );
 
-  renderEquity(
-    data.equityCurve
+
+  requestAnimationFrame(
+    () =>
+      drawEquity(
+        data.trades
+      )
   );
 
 }
 
 
-/* ============================================================
-   SUMMARY
-============================================================ */
-
-function renderSummary(s){
-
-  const profitClass =
-    s.totalR >= 0
-      ?
-      "green"
-      :
-      "red";
-
-
-  $("metrics").innerHTML = `
-
-    ${metric(
-      "Trades",
-      s.trades
-    )}
-
-    ${metric(
-      "Win Rate",
-      `${s.winRate}%`,
-      s.winRate >= 50
-        ?
-        "green"
-        :
-        ""
-    )}
-
-    ${metric(
-      "Profit Factor",
-      s.profitFactor,
-      s.profitFactor >= 1
-        ?
-        "green"
-        :
-        "red"
-    )}
-
-    ${metric(
-      "Total R",
-      `${s.totalR}R`,
-      profitClass
-    )}
-
-    ${metric(
-      "Expectancy",
-      `${s.expectancyR}R`,
-      s.expectancyR >= 0
-        ?
-        "green"
-        :
-        "red"
-    )}
-
-    ${metric(
-      "Max DD",
-      `${s.maxDrawdownPct}%`,
-      "red"
-    )}
-
-    ${metric(
-      "Start",
-      money(
-        s.startingBalance
-      )
-    )}
-
-    ${metric(
-      "End",
-      money(
-        s.endingBalance
-      ),
-      profitClass
-    )}
-
-    ${metric(
-      "Return",
-      `${s.returnPct}%`,
-      profitClass
-    )}
-
-    ${metric(
-      "Avg Raid",
-      s.averageRaidScore,
-      "gold"
-    )}
-
-    ${metric(
-      "Avg Liquidity",
-      s.averageLiquidityStrength,
-      "blue"
-    )}
-
-    ${metric(
-      "Avg Bars Held",
-      s.averageBarsHeld
-    )}
-
-  `;
-
-}
-
-
-function metric(
-  name,
-  value,
-  cls=""
-){
-
-  return `
-
-    <div class="metric">
-
-      <div class="metricName">
-        ${name}
-      </div>
-
-      <div class="metricValue ${cls}">
-        ${value}
-      </div>
-
-    </div>
-
-  `;
-
-}
-
-
-/* ============================================================
-   STATS TABLE
-============================================================ */
-
-function renderStatsTable(
-  id,
-  rows
-){
-
-  if(
-    !rows ||
-    !rows.length
-  ){
-
-    $(id).innerHTML =
-      `<div class="empty">No data.</div>`;
-
-    return;
-
-  }
-
-
-  $(id).innerHTML = `
-
-    <table>
-
-      <thead>
-
-        <tr>
-
-          <th>
-            Group
-          </th>
-
-          <th>
-            Trades
-          </th>
-
-          <th>
-            WR
-          </th>
-
-          <th>
-            PF
-          </th>
-
-          <th>
-            Total R
-          </th>
-
-          <th>
-            Exp
-          </th>
-
-        </tr>
-
-      </thead>
-
-      <tbody>
-
-        ${rows.map(row => `
-
-          <tr>
-
-            <td>
-              ${row.name}
-            </td>
-
-            <td>
-              ${row.trades}
-            </td>
-
-            <td
-              class="${
-                row.winRate >= 50
-                  ?
-                  "green"
-                  :
-                  ""
-              }"
-            >
-              ${row.winRate}%
-            </td>
-
-            <td>
-              ${row.profitFactor}
-            </td>
-
-            <td
-              class="${
-                row.totalR >= 0
-                  ?
-                  "green"
-                  :
-                  "red"
-              }"
-            >
-              ${row.totalR}R
-            </td>
-
-            <td>
-              ${row.expectancyR}R
-            </td>
-
-          </tr>
-
-        `).join("")}
-
-      </tbody>
-
-    </table>
-
-  `;
-
-}
-
-
-/* ============================================================
-   TRADES
-============================================================ */
-
-function renderTrades(trades){
-
-  if(
-    !trades ||
+function renderTrades(
+  trades
+) {
+
+  if (
     !trades.length
-  ){
+  ) {
 
-    $("tradesTable").innerHTML =
-      `<div class="empty">No trades generated.</div>`;
+    $("tradeRows")
+      .innerHTML = `
+
+        <tr>
+
+          <td
+            colspan="10"
+            class="empty"
+          >
+            No trades generated with these settings.
+          </td>
+
+        </tr>
+      `;
+
 
     return;
 
   }
 
 
-  const reversed =
-    [...trades]
-      .reverse();
+  $("tradeRows")
+    .innerHTML =
+      trades
+
+        .map(
+          trade => {
+
+            const won =
+              trade.r >
+              0;
 
 
-  $("tradesTable").innerHTML = `
+            return `
 
-    <table>
+              <tr>
 
-      <thead>
+                <td>
+                  ${trade.id}
+                </td>
 
-        <tr>
+                <td>
+                  ${fmtTime(
+                    trade.entryTime
+                  )}
+                </td>
 
-          <th>
-            Entry
-          </th>
+                <td
+                  class="${
+                    trade.direction ===
+                    "BUY"
+                      ? "buy"
+                      : "sell"
+                  }"
+                >
+                  ${trade.direction}
+                </td>
 
-          <th>
-            Side
-          </th>
+                <td>
+                  ${trade.zoneName}
+                </td>
 
-          <th>
-            Liquidity
-          </th>
+                <td>
+                  ${fmt(
+                    trade.raidScore,
+                    1
+                  )}
+                </td>
 
-          <th>
-            Raid
-          </th>
+                <td>
+                  ${fmt(
+                    trade.entry
+                  )}
+                </td>
 
-          <th>
-            Quality
-          </th>
+                <td>
+                  ${fmt(
+                    trade.stop
+                  )}
+                </td>
 
-          <th>
-            Distance
-          </th>
+                <td>
+                  ${fmt(
+                    trade.target
+                  )}
+                </td>
 
-          <th>
-            Price
-          </th>
+                <td
+                  class="${
+                    won
+                      ? "win"
+                      : "loss"
+                  }"
+                >
+                  ${trade.result}
+                </td>
 
-          <th>
-            SL
-          </th>
+                <td
+                  class="${
+                    won
+                      ? "win"
+                      : "loss"
+                  }"
+                >
+                  ${
+                    trade.r >=
+                    0
+                      ? "+"
+                      : ""
+                  }${fmt(
+                    trade.r,
+                    2
+                  )}R
+                </td>
 
-          <th>
-            TP
-          </th>
+              </tr>
+            `;
 
-          <th>
-            Result
-          </th>
+          }
+        )
 
-          <th>
-            R
-          </th>
-
-        </tr>
-
-      </thead>
-
-
-      <tbody>
-
-      ${reversed.map(t => `
-
-        <tr>
-
-          <td>
-            ${dateText(
-              t.entryTime
-            )}
-          </td>
-
-          <td>
-
-            <span
-              class="
-                badge
-                ${
-                  t.side === "BUY"
-                    ?
-                    "buy"
-                    :
-                    "sell"
-                }
-              "
-            >
-              ${t.side}
-            </span>
-
-          </td>
-
-          <td>
-
-            <strong>
-              ${t.liquidity}
-            </strong>
-
-            <div
-              style="
-                color:var(--muted);
-                margin-top:3px
-              "
-            >
-              ${t.liquidityType}
-            </div>
-
-          </td>
-
-          <td class="gold">
-            ${t.raidStrength}
-          </td>
-
-          <td>
-            ${t.combinedQuality}
-          </td>
-
-          <td>
-            ${t.distanceAtr} ATR
-          </td>
-
-          <td>
-            ${t.entry}
-          </td>
-
-          <td>
-            ${t.stop}
-          </td>
-
-          <td>
-            ${t.target}
-          </td>
-
-          <td
-            class="${
-              t.pnlR > 0
-                ?
-                "win"
-                :
-                "loss"
-            }"
-          >
-            ${t.result}
-          </td>
-
-          <td
-            class="${
-              t.pnlR >= 0
-                ?
-                "green"
-                :
-                "red"
-            }"
-          >
-            ${t.pnlR}R
-          </td>
-
-        </tr>
-
-      `).join("")}
-
-      </tbody>
-
-    </table>
-
-  `;
+        .join("");
 
 }
 
 
-/* ============================================================
-   EQUITY CHART
-============================================================ */
-
-function renderEquity(rows){
+function drawEquity(
+  newestFirst
+) {
 
   const canvas =
-    $("equityCanvas");
+    $("equityChart");
 
 
   const rect =
@@ -1863,21 +1696,22 @@ function renderEquity(rows){
 
 
   const dpr =
-    window.devicePixelRatio ||
-    1;
+    Math.min(
+      window.devicePixelRatio ||
+      1,
+      2
+    );
 
 
   canvas.width =
-    Math.max(
-      1,
+    Math.floor(
       rect.width *
       dpr
     );
 
 
   canvas.height =
-    Math.max(
-      1,
+    Math.floor(
       rect.height *
       dpr
     );
@@ -1889,126 +1723,264 @@ function renderEquity(rows){
     );
 
 
-  ctx.scale(
+  ctx.setTransform(
     dpr,
-    dpr
+    0,
+    0,
+    dpr,
+    0,
+    0
   );
+
+
+  const width =
+    rect.width;
+
+
+  const height =
+    rect.height;
 
 
   ctx.clearRect(
     0,
     0,
-    rect.width,
-    rect.height
+    width,
+    height
   );
 
 
-  if(
-    !rows ||
-    rows.length < 2
-  ){
+  const trades =
+    [
+      ...newestFirst
+    ]
+    .reverse();
+
+
+  const values = [
+    0
+  ];
+
+
+  let equity =
+    0;
+
+
+  for (
+    const trade
+    of trades
+  ) {
+
+    equity +=
+      Number(
+        trade.r
+      ) ||
+      0;
+
+
+    values.push(
+      equity
+    );
+
+  }
+
+
+  const padding = {
+
+    left:
+      38,
+
+    right:
+      10,
+
+    top:
+      14,
+
+    bottom:
+      22
+
+  };
+
+
+  const min =
+    Math.min(
+      ...values,
+      0
+    );
+
+
+  const max =
+    Math.max(
+      ...values,
+      0
+    );
+
+
+  const range =
+    Math.max(
+      max -
+      min,
+      1
+    );
+
+
+  const plotWidth =
+    width -
+    padding.left -
+    padding.right;
+
+
+  const plotHeight =
+    height -
+    padding.top -
+    padding.bottom;
+
+
+  function x(
+    index
+  ) {
+
+    return (
+      padding.left +
+      index /
+      Math.max(
+        values.length -
+        1,
+        1
+      ) *
+      plotWidth
+    );
+
+  }
+
+
+  function y(
+    value
+  ) {
+
+    return (
+      padding.top +
+      (
+        max -
+        value
+      ) /
+      range *
+      plotHeight
+    );
+
+  }
+
+
+  for (
+    let i = 0;
+    i <=
+      4;
+    i++
+  ) {
+
+    const yy =
+      padding.top +
+      plotHeight *
+      i /
+      4;
+
+
+    ctx.strokeStyle =
+      "rgba(255,255,255,.05)";
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+      padding.left,
+      yy
+    );
+
+
+    ctx.lineTo(
+      padding.left +
+      plotWidth,
+      yy
+    );
+
+
+    ctx.stroke();
+
+
+    const value =
+      max -
+      range *
+      i /
+      4;
+
 
     ctx.fillStyle =
-      "#798696";
+      "#66707d";
 
 
     ctx.font =
-      "12px sans-serif";
+      "7px -apple-system, sans-serif";
+
+
+    ctx.textAlign =
+      "right";
 
 
     ctx.fillText(
-      "Not enough trades for equity curve.",
-      18,
-      30
+      `${fmt(
+        value,
+        1
+      )}R`,
+      padding.left -
+      5,
+      yy +
+      2
     );
+
+  }
+
+
+  const zeroY =
+    y(
+      0
+    );
+
+
+  ctx.strokeStyle =
+    "rgba(242,199,92,.22)";
+
+
+  ctx.beginPath();
+
+
+  ctx.moveTo(
+    padding.left,
+    zeroY
+  );
+
+
+  ctx.lineTo(
+    padding.left +
+    plotWidth,
+    zeroY
+  );
+
+
+  ctx.stroke();
+
+
+  if (
+    values.length <
+    2
+  ) {
 
     return;
 
   }
 
 
-  const values =
-    rows.map(
-      x =>
-        Number(
-          x.balance
-        )
-    );
-
-
-  const low =
-    Math.min(
-      ...values
-    );
-
-
-  const high =
-    Math.max(
-      ...values
-    );
-
-
-  const range =
-    high -
-    low ||
-    1;
-
-
-  const pad =
-    18;
-
-
-  const width =
-    rect.width -
-    pad * 2;
-
-
-  const height =
-    rect.height -
-    pad * 2;
-
-
   ctx.strokeStyle =
-    "rgba(255,255,255,.07)";
-
-
-  ctx.lineWidth =
-    1;
-
-
-  for(
-    let i=1;
-    i<5;
-    i++
-  ){
-
-    const y =
-      pad +
-      height *
-      i /
-      5;
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-      pad,
-      y
-    );
-
-    ctx.lineTo(
-      rect.width -
-      pad,
-      y
-    );
-
-    ctx.stroke();
-
-  }
-
-
-  ctx.strokeStyle =
-    "#f5c95f";
+    "#f2c75c";
 
 
   ctx.lineWidth =
@@ -2018,60 +1990,26 @@ function renderEquity(rows){
   ctx.beginPath();
 
 
-  rows.forEach(
-    (row,index) => {
+  values.forEach(
+    (
+      value,
+      index
+    ) => {
 
-      const x =
-
-        pad
-
-        +
-
-        width *
-        index /
-        Math.max(
-          1,
-          rows.length - 1
-        );
-
-
-      const y =
-
-        pad
-
-        +
-
-        height
-
-        -
-
-        (
-          (
-            row.balance -
-            low
-          )
-
-          /
-          range
-        )
-
-        *
-        height;
-
-
-      if(index === 0){
+      if (
+        index === 0
+      ) {
 
         ctx.moveTo(
-          x,
-          y
+          x(index),
+          y(value)
         );
 
-      }
-      else{
+      } else {
 
         ctx.lineTo(
-          x,
-          y
+          x(index),
+          y(value)
         );
 
       }
@@ -2082,56 +2020,74 @@ function renderEquity(rows){
 
   ctx.stroke();
 
-}
+
+  ctx.fillStyle =
+    "#f2c75c";
 
 
-/* ============================================================
-   HELPERS
-============================================================ */
+  ctx.beginPath();
 
-function money(value){
 
-  return Number(
-    value || 0
-  ).toLocaleString(
-
-    undefined,
-
-    {
-      minimumFractionDigits:2,
-      maximumFractionDigits:2
-    }
-
+  ctx.arc(
+    x(
+      values.length -
+      1
+    ),
+    y(
+      lastValue(
+        values
+      )
+    ),
+    3,
+    0,
+    Math.PI *
+    2
   );
 
+
+  ctx.fill();
+
 }
 
 
-function dateText(value){
+function lastValue(
+  array
+) {
 
-  if(!value){
-    return "-";
+  return array[
+    array.length -
+    1
+  ];
+
+}
+
+
+window.addEventListener(
+  "resize",
+  () => {
+
+    if (
+      LAST_DATA
+    ) {
+
+      clearTimeout(
+        window.__resizeTimer
+      );
+
+
+      window.__resizeTimer =
+        setTimeout(
+          () =>
+            drawEquity(
+              LAST_DATA.trades
+            ),
+          100
+        );
+
+    }
+
   }
-
-
-  const d =
-    new Date(value);
-
-
-  return d.toLocaleString(
-
-    undefined,
-
-    {
-      month:"short",
-      day:"2-digit",
-      hour:"2-digit",
-      minute:"2-digit"
-    }
-
-  );
-
-}
+);
 
 </script>
 
