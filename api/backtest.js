@@ -1,129 +1,86 @@
-/* =========================================================
-   MKAYFX XAU LIQUIDITY SWEEP BACKTEST ENGINE
+/* ============================================================
+   MKAYFX XAU/USD LIQUIDITY RAID BACKTESTER V1
    /api/backtest.js
 
-   BACKTEST MODEL
-   --------------
-   XAU/USD
-   Execution: M5
-   Context:   M15 + H1
+   DATA ENGINE
+   -----------
+   TWELVE_DATA_API_KEY_4 ONLY
 
-   LIQUIDITY SOURCES
-   -----------------
-   - Confirmed M5 pivot highs / lows
-   - Previous Day High / Low
-   - Asia High / Low
+   STRATEGY
+   --------
+   Reconstruct historical liquidity pools using ONLY information
+   available at that point in time.
 
-   SETUP
+   HIGH liquidity:
+   Price below HIGH pool + raid pressure >= threshold
+   => BUY toward liquidity
+
+   LOW liquidity:
+   Price above LOW pool + raid pressure >= threshold
+   => SELL toward liquidity
+
+   DEFAULT RULE
+   ------------
+   Raid Strength >= 70
+
+   ENTRY
    -----
-   1. Price approaches historical liquidity.
-   2. Price sweeps through the level.
-   3. Candle closes back through the level.
-   4. Follow-through candle confirms rejection.
-   5. M5 / M15 structure + delta proxy score setup.
-   6. Entry occurs on NEXT candle open.
-
-   EXIT MODEL
-   ----------
-   - SL behind sweep extreme
-   - TP1 partial exit
-   - TP2 final exit
-   - After TP1, remainder moves to breakeven
-   - Optional max holding time
+   Signal calculated after completed M5 candle.
+   Entry occurs at NEXT M5 OPEN.
 
    IMPORTANT
    ---------
-   No future candles are used to generate an entry.
-   Pivot levels only become available after confirmation.
+   This is a historical reconstruction.
 
-   REQUIRED ENVIRONMENT VARIABLE
-   -----------------------------
-   TWELVE_DATA_API_KEY
+   It intentionally does NOT use future candles when calculating
+   the signal.
 
-   OPTIONAL ENVIRONMENT VARIABLES
-   ------------------------------
-   BACKTEST_SYMBOL
-   BACKTEST_DAYS
-   BACKTEST_INITIAL_BALANCE
-   BACKTEST_RISK_PERCENT
-   BACKTEST_MIN_SCORE
-   BACKTEST_TP1_R
-   BACKTEST_TP2_R
-   BACKTEST_SPREAD
-   BACKTEST_SLIPPAGE
-   BACKTEST_MAX_TRADES
-========================================================= */
+   OHLC cannot reveal exact tick ordering inside one candle.
+   If SL and TP are both touched during the same candle,
+   default collision handling is SL FIRST.
+
+   ENVIRONMENT
+   -----------
+   TWELVE_DATA_API_KEY_4
+============================================================ */
 
 
-const TD_KEY =
-  process.env.TWELVE_DATA_API_KEY;
+/* ============================================================
+   CONFIG
+============================================================ */
 
+const SYMBOL = "XAU/USD";
 
 const TD_BASE =
-  "https://api.twelvedata.com";
+  "https://api.twelvedata.com/time_series";
+
+const TD_KEY =
+  String(
+    process.env.TWELVE_DATA_API_KEY_4 ||
+    ""
+  ).trim();
 
 
-const DEFAULT_SYMBOL =
-  process.env.BACKTEST_SYMBOL
-  ||
-  "XAU/USD";
+/* ============================================================
+   API HANDLER
+============================================================ */
 
-
-/* =========================================================
-   CONSTANTS
-========================================================= */
-
-const INTERVAL =
-  "5min";
-
-
-const BAR_MS =
-  5 *
-  60_000;
-
-
-const PIVOT_LEFT =
-  3;
-
-
-const PIVOT_RIGHT =
-  3;
-
-
-const LEVEL_MAX_AGE =
-  600;
-
-
-const MAX_DAYS =
-  90;
-
-
-/* =========================================================
-   HANDLER
-========================================================= */
-
-export default async function handler(
-  req,
-  res
-) {
+export default async function handler(req, res) {
 
   res.setHeader(
     "Access-Control-Allow-Origin",
     "*"
   );
 
-
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET,OPTIONS"
   );
 
-
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type"
   );
-
 
   res.setHeader(
     "Cache-Control",
@@ -131,10 +88,7 @@ export default async function handler(
   );
 
 
-  if (
-    req.method ===
-    "OPTIONS"
-  ) {
+  if (req.method === "OPTIONS") {
 
     return res
       .status(204)
@@ -143,211 +97,127 @@ export default async function handler(
   }
 
 
-  if (
-    req.method !==
-    "GET"
-  ) {
+  if (req.method !== "GET") {
 
     return res
       .status(405)
       .json({
 
-        ok:
-          false,
-
-        error:
-          "GET only"
+        ok: false,
+        error: "GET only"
 
       });
 
   }
 
 
-  if (
-    !TD_KEY
-  ) {
+  if (!TD_KEY) {
 
     return res
       .status(500)
       .json({
 
-        ok:
-          false,
+        ok: false,
 
         error:
-          "Missing TWELVE_DATA_API_KEY environment variable."
+          "Add TWELVE_DATA_API_KEY_4 in Vercel."
 
       });
 
   }
 
 
-  const started =
-    Date.now();
-
-
   try {
 
-    /* =====================================================
-       CONFIG
-    ===================================================== */
-
-    const config =
-      readConfig(
-        req
-      );
-
-
-    /* =====================================================
-       HISTORICAL DATA
-    ===================================================== */
-
-    const end =
-      new Date();
-
-
-    const start =
-      new Date(
-
-        end.getTime()
-
-        -
-
-        config.days *
-        24 *
-        60 *
-        60_000
-
+    const settings =
+      parseSettings(
+        req.query || {}
       );
 
 
     const bars =
-      await fetchHistoricalBars({
-
-        symbol:
-          config.symbol,
-
-        start,
-
-        end
-
-      });
+      await fetchHistoricalM5(
+        settings.outputsize
+      );
 
 
-    if (
-      bars.length <
-      300
-    ) {
+    if (bars.length < 500) {
 
       throw new Error(
-
-        `Not enough historical candles. Received ${bars.length}.`
-
+        `Only ${bars.length} M5 candles received. Need at least 500.`
       );
 
     }
 
-
-    /* =====================================================
-       REMOVE INCOMPLETE CURRENT CANDLE
-    ===================================================== */
-
-    const completedBars =
-      bars.filter(
-
-        bar =>
-          bar.ts +
-          BAR_MS <=
-          Date.now()
-
-      );
-
-
-    if (
-      completedBars.length <
-      300
-    ) {
-
-      throw new Error(
-        "Not enough completed M5 candles."
-      );
-
-    }
-
-
-    /* =====================================================
-       RUN BACKTEST
-    ===================================================== */
 
     const result =
       runBacktest(
-
-        completedBars,
-
-        config
-
+        bars,
+        settings
       );
 
-
-    /* =====================================================
-       RESPONSE
-    ===================================================== */
 
     return res
       .status(200)
       .json({
 
-        ok:
-          true,
+        ok: true,
 
         symbol:
-          config.symbol,
-
-        interval:
-          INTERVAL,
+          SYMBOL,
 
         generatedAt:
-          new Date()
-            .toISOString(),
+          new Date().toISOString(),
 
-        runtimeMs:
-          Date.now() -
-          started,
+        provider:
+          "Twelve Data",
 
-        data: {
+        apiEngine:
+          4,
 
-          bars:
-            completedBars.length,
+        apiVariable:
+          "TWELVE_DATA_API_KEY_4",
 
-          from:
-            new Date(
-              completedBars[0].ts
-            )
-              .toISOString(),
+        barsReceived:
+          bars.length,
 
-          to:
-            new Date(
-              completedBars[
-                completedBars.length - 1
-              ].ts
-            )
-              .toISOString()
+        firstBar:
+          bars[0]
+            ?.time
+            ?.toISOString(),
 
-        },
+        lastBar:
+          bars.at(-1)
+            ?.time
+            ?.toISOString(),
 
-        config,
+        settings,
 
-        ...result
+        ...result,
+
+        warnings: [
+
+          "Raid Strength is a heuristic score rather than a calibrated probability.",
+
+          "Historical results do not guarantee future profitability.",
+
+          "The backtester calculates signals only from information available before entry.",
+
+          "M5 data is resampled into M15, H1 and H4 historical context.",
+
+          "Spot XAU/USD volume may be absent or provider-specific.",
+
+          "Same-candle TP/SL collisions default to SL-first for conservative testing."
+
+        ]
 
       });
 
 
-  } catch (
-    error
-  ) {
+  } catch (error) {
 
     console.error(
-      "Backtest error:",
+      "BACKTEST ERROR",
       error
     );
 
@@ -356,12 +226,13 @@ export default async function handler(
       .status(500)
       .json({
 
-        ok:
-          false,
+        ok: false,
+
+        symbol:
+          SYMBOL,
 
         error:
-          error?.message
-          ||
+          error?.message ||
           "Unknown backtest error"
 
       });
@@ -371,1242 +242,898 @@ export default async function handler(
 }
 
 
-/* =========================================================
-   CONFIG
-========================================================= */
+/* ============================================================
+   SETTINGS
+============================================================ */
 
-function readConfig(
-  req
-) {
-
-  const q =
-    req.query
-    ||
-    {};
-
-
-  const symbol =
-    String(
-      q.symbol
-      ||
-      DEFAULT_SYMBOL
-    );
-
-
-  /*
-    This project intentionally supports XAU/USD only.
-  */
-  if (
-    symbol !==
-    "XAU/USD"
-  ) {
-
-    throw new Error(
-      "This backtester currently supports XAU/USD only."
-    );
-
-  }
-
+function parseSettings(query) {
 
   return {
 
-    symbol,
-
-
-    days:
-      queryNumber(
-
-        q.days,
-
-        envNumber(
-          "BACKTEST_DAYS",
-          30
-        ),
-
-        5,
-
-        MAX_DAYS
-
+    outputsize:
+      intSetting(
+        query.outputsize,
+        5000,
+        600,
+        5000
       ),
 
 
-    initialBalance:
-      queryNumber(
-
-        q.balance,
-
-        envNumber(
-          "BACKTEST_INITIAL_BALANCE",
-          200
-        ),
-
-        10,
-
-        1_000_000
-
-      ),
-
-
-    riskPercent:
-      queryNumber(
-
-        q.risk,
-
-        envNumber(
-          "BACKTEST_RISK_PERCENT",
-          1
-        ),
-
-        0.1,
-
-        20
-
-      ),
-
-
-    minScore:
-      queryNumber(
-
-        q.minScore,
-
-        envNumber(
-          "BACKTEST_MIN_SCORE",
-          70
-        ),
-
-        30,
-
+    minRaidScore:
+      numberSetting(
+        query.minRaidScore,
+        70,
+        0,
         100
-
       ),
 
 
-    tp1R:
-      queryNumber(
+    minLiquidityStrength:
+      numberSetting(
+        query.minLiquidityStrength,
+        0,
+        0,
+        100
+      ),
 
-        q.tp1R,
 
-        envNumber(
-          "BACKTEST_TP1_R",
-          1.5
-        ),
+    minCombinedQuality:
+      numberSetting(
+        query.minCombinedQuality,
+        0,
+        0,
+        100
+      ),
 
-        0.5,
 
+    maxDistanceAtr:
+      numberSetting(
+        query.maxDistanceAtr,
+        2.0,
+        0.05,
         10
-
       ),
 
 
-    tp2R:
-      queryNumber(
+    stopAtr:
+      numberSetting(
+        query.stopAtr,
+        1.25,
+        0.1,
+        10
+      ),
 
-        q.tp2R,
 
-        envNumber(
-          "BACKTEST_TP2_R",
-          2.5
-        ),
+    rr:
+      numberSetting(
+        query.rr,
+        1.5,
+        0.25,
+        10
+      ),
 
-        0.75,
 
-        15
+    riskPct:
+      numberSetting(
+        query.riskPct,
+        1,
+        0.05,
+        20
+      ),
 
+
+    startingBalance:
+      numberSetting(
+        query.startingBalance,
+        10000,
+        10,
+        100000000
       ),
 
 
     spread:
-      queryNumber(
-
-        q.spread,
-
-        envNumber(
-          "BACKTEST_SPREAD",
-          0
-        ),
-
+      numberSetting(
+        query.spread,
+        0.20,
         0,
-
         20
-
       ),
 
 
     slippage:
-      queryNumber(
-
-        q.slippage,
-
-        envNumber(
-          "BACKTEST_SLIPPAGE",
-          0
-        ),
-
+      numberSetting(
+        query.slippage,
+        0.05,
         0,
+        10
+      ),
 
-        20
 
+    cooldownBars:
+      intSetting(
+        query.cooldownBars,
+        3,
+        0,
+        500
       ),
 
 
     maxTrades:
-      Math.round(
+      intSetting(
+        query.maxTrades,
+        1000,
+        1,
+        10000
+      ),
 
-        queryNumber(
 
-          q.maxTrades,
+    oneTradeAtATime:
+      boolSetting(
+        query.oneTradeAtATime,
+        true
+      ),
 
-          envNumber(
-            "BACKTEST_MAX_TRADES",
-            1000
-          ),
 
-          1,
+    allowDormant:
+      boolSetting(
+        query.allowDormant,
+        false
+      ),
 
-          5000
 
-        )
+    tradeSide:
+      enumSetting(
+
+        query.tradeSide,
+
+        [
+          "BOTH",
+          "BUY",
+          "SELL"
+        ],
+
+        "BOTH"
 
       ),
 
 
-    maxHoldBars:
-      Math.round(
+    targetMode:
+      enumSetting(
 
-        queryNumber(
+        query.targetMode,
 
-          q.maxHoldBars,
+        [
+          "FIXED_RR",
+          "LIQUIDITY",
+          "SWEEP"
+        ],
 
-          72,
+        "FIXED_RR"
 
-          6,
+      ),
 
-          500
 
-        )
+    sessionFilter:
+      enumSetting(
 
-      )
+        query.sessionFilter,
+
+        [
+          "ALL",
+          "ASIA",
+          "LONDON",
+          "NEW_YORK",
+          "LONDON_NY"
+        ],
+
+        "ALL"
+
+      ),
+
+
+    collisionMode:
+      enumSetting(
+
+        query.collisionMode,
+
+        [
+          "SL_FIRST",
+          "TP_FIRST"
+        ],
+
+        "SL_FIRST"
+
+      ),
+
+
+    minimumBars:
+      300
 
   };
 
 }
 
 
-/* =========================================================
-   TWELVE DATA HISTORY
-========================================================= */
+/* ============================================================
+   FETCH M5 DATA — API 4
+============================================================ */
 
-async function fetchHistoricalBars({
-
-  symbol,
-
-  start,
-
-  end
-
-}) {
-
-  /*
-    Twelve Data limits how much data a single
-    time_series request can return.
-
-    Fetch smaller time chunks and merge them.
-  */
-
-  const chunkDays =
-    12;
-
-
-  const all =
-    [];
-
-
-  let cursor =
-    new Date(
-      start
-    );
-
-
-  while (
-    cursor <
-    end
-  ) {
-
-    const chunkEnd =
-      new Date(
-
-        Math.min(
-
-          end.getTime(),
-
-          cursor.getTime()
-
-          +
-
-          chunkDays *
-          24 *
-          60 *
-          60_000
-
-        )
-
-      );
-
-
-    const rows =
-      await fetchChunk({
-
-        symbol,
-
-        start:
-          cursor,
-
-        end:
-          chunkEnd
-
-      });
-
-
-    all.push(
-      ...rows
-    );
-
-
-    cursor =
-      new Date(
-
-        chunkEnd.getTime()
-
-        +
-
-        1000
-
-      );
-
-  }
-
-
-  /* =====================================================
-     DEDUPLICATE
-  ===================================================== */
-
-  const map =
-    new Map();
-
-
-  for (
-    const bar of all
-  ) {
-
-    map.set(
-      bar.ts,
-      bar
-    );
-
-  }
-
-
-  return Array
-    .from(
-      map.values()
-    )
-    .sort(
-      (
-        a,
-        b
-      ) =>
-        a.ts -
-        b.ts
-    );
-
-}
-
-
-async function fetchChunk({
-
-  symbol,
-
-  start,
-
-  end
-
-}) {
+async function fetchHistoricalM5(outputsize) {
 
   const url =
-    new URL(
-      `${TD_BASE}/time_series`
-    );
 
+    `${TD_BASE}` +
 
-  url.searchParams.set(
-    "symbol",
-    symbol
-  );
+    `?symbol=${encodeURIComponent(SYMBOL)}` +
 
+    `&interval=5min` +
 
-  url.searchParams.set(
-    "interval",
-    INTERVAL
-  );
+    `&outputsize=${encodeURIComponent(outputsize)}` +
 
+    `&timezone=UTC` +
 
-  url.searchParams.set(
-    "start_date",
-    tdDate(
-      start
-    )
-  );
+    `&format=JSON` +
 
-
-  url.searchParams.set(
-    "end_date",
-    tdDate(
-      end
-    )
-  );
-
-
-  url.searchParams.set(
-    "outputsize",
-    "5000"
-  );
-
-
-  url.searchParams.set(
-    "timezone",
-    "UTC"
-  );
-
-
-  url.searchParams.set(
-    "format",
-    "JSON"
-  );
-
-
-  url.searchParams.set(
-    "apikey",
-    TD_KEY
-  );
+    `&apikey=${encodeURIComponent(TD_KEY)}`;
 
 
   const response =
     await fetch(
       url,
       {
-
+        cache: "no-store",
         headers: {
-
-          "User-Agent":
-            "MKAYFX-XAU-Backtester/1.0"
-
+          Accept: "application/json"
         }
-
       }
     );
 
 
-  if (
-    !response.ok
-  ) {
+  const text =
+    await response.text();
+
+
+  let json;
+
+
+  try {
+
+    json =
+      JSON.parse(text);
+
+  } catch {
+
+    throw new Error(
+      "Twelve Data returned invalid JSON."
+    );
+
+  }
+
+
+  if (response.status === 429) {
+
+    throw new Error(
+      json?.message ||
+      "API 4 Twelve Data rate limit reached."
+    );
+
+  }
+
+
+  if (!response.ok) {
 
     throw new Error(
 
-      `Twelve Data HTTP ${response.status}`
+      `Twelve Data HTTP ${response.status}: ` +
+
+      `${
+        json?.message ||
+        text.slice(0, 200)
+      }`
 
     );
 
   }
 
 
-  const json =
-    await response.json();
-
-
-  if (
-    json.status ===
-    "error"
-  ) {
+  if (json.status === "error") {
 
     throw new Error(
-
-      `Twelve Data: ` +
-
-      (
-        json.message
-        ||
-        json.code
-        ||
-        "unknown API error"
-      )
-
+      json.message ||
+      "Twelve Data returned an error."
     );
 
   }
 
 
-  if (
-    !Array.isArray(
-      json.values
-    )
-  ) {
+  if (!Array.isArray(json.values)) {
 
-    return [];
+    throw new Error(
+      "Twelve Data returned no historical candles."
+    );
 
   }
 
 
   return json.values
 
-    .map(
-      row => {
+    .map(row => ({
 
-        const ts =
-          Date.parse(
+      time:
+        parseTDTime(
+          row.datetime
+        ),
 
-            String(
-              row.datetime
-            )
-              .replace(
-                " ",
-                "T"
-              )
+      open:
+        Number(
+          row.open
+        ),
 
-            +
+      high:
+        Number(
+          row.high
+        ),
 
-            "Z"
+      low:
+        Number(
+          row.low
+        ),
 
-          );
+      close:
+        Number(
+          row.close
+        ),
 
+      volume:
+        Number(
+          row.volume
+        ) || 0
 
-        return {
+    }))
 
-          ts,
+    .filter(bar =>
 
-          open:
-            num(
-              row.open
-            ),
+      Number.isFinite(
+        bar.time.getTime()
+      )
 
-          high:
-            num(
-              row.high
-            ),
+      &&
 
-          low:
-            num(
-              row.low
-            ),
+      Number.isFinite(
+        bar.open
+      )
 
-          close:
-            num(
-              row.close
-            ),
+      &&
 
-          volume:
-            num(
-              row.volume
-            )
+      Number.isFinite(
+        bar.high
+      )
 
-        };
+      &&
 
-      }
+      Number.isFinite(
+        bar.low
+      )
+
+      &&
+
+      Number.isFinite(
+        bar.close
+      )
+
     )
 
-    .filter(
-      bar =>
-
-        Number.isFinite(
-          bar.ts
-        )
-
-        &&
-
-        Number.isFinite(
-          bar.open
-        )
-
-        &&
-
-        Number.isFinite(
-          bar.high
-        )
-
-        &&
-
-        Number.isFinite(
-          bar.low
-        )
-
-        &&
-
-        Number.isFinite(
-          bar.close
-        )
-
+    .sort(
+      (a, b) =>
+        a.time - b.time
     );
 
 }
 
 
-/* =========================================================
-   BACKTEST ENGINE
-========================================================= */
+/* ============================================================
+   MASTER BACKTEST
+============================================================ */
 
 function runBacktest(
   bars,
-  config
+  settings
 ) {
 
-  /* =====================================================
-     INDICATORS
-  ===================================================== */
-
-  const atr5 =
-    atr(
-      bars,
-      14
+  const startIndex =
+    Math.max(
+      settings.minimumBars,
+      300
     );
 
 
-  const m5States =
-    buildStateSeries(
-      bars
-    );
+  const trades = [];
 
+  const skipped = {
 
-  const m15 =
-    resample(
-      bars,
-      15
-    );
+    lowRaid: 0,
+    lowLiquidity: 0,
+    lowQuality: 0,
+    tooFar: 0,
+    wrongSide: 0,
+    dormant: 0,
+    session: 0,
+    cooldown: 0,
+    positionLimit: 0,
+    invalidTarget: 0
 
-
-  const h1 =
-    resample(
-      bars,
-      60
-    );
-
-
-  const m15States =
-    buildStateSeries(
-      m15
-    );
-
-
-  const h1States =
-    buildStateSeries(
-      h1
-    );
-
-
-  const delta =
-    buildDeltaSeries(
-      bars
-    );
-
-
-  const delta3 =
-    rollingAverage(
-      delta,
-      3
-    );
-
-
-  const delta9 =
-    rollingAverage(
-      delta,
-      9
-    );
-
-
-  const contexts =
-    buildDailyContext(
-      bars
-    );
-
-
-  /* =====================================================
-     STATE
-  ===================================================== */
-
-  const pivotHighs =
-    [];
-
-
-  const pivotLows =
-    [];
-
-
-  const usedStaticLevels =
-    new Set();
-
-
-  const trades =
-    [];
-
-
-  let pending =
-    null;
-
-
-  let blockedUntil =
-    -1;
-
-
-  let rejectedSignals =
-    0;
+  };
 
 
   let balance =
-    config.initialBalance;
+    settings.startingBalance;
+
+
+  let peakBalance =
+    balance;
+
+
+  let maxDrawdownPct =
+    0;
+
+
+  let lastEntryIndex =
+    -999999;
+
+
+  let openTrades =
+    [];
 
 
   const equityCurve = [
 
     {
-
-      trade:
-        0,
+      time:
+        bars[startIndex]
+          .time
+          .toISOString(),
 
       balance:
         round(
           balance,
           2
         )
-
     }
 
   ];
 
 
-  /* =====================================================
-     WALK FORWARD BAR-BY-BAR
-  ===================================================== */
-
   for (
-
-    let i =
-      220;
-
-    i <
-    bars.length -
-    2;
-
+    let i = startIndex;
+    i < bars.length - 1;
     i++
-
   ) {
 
-    const bar =
+    const current =
       bars[i];
 
 
-    const previous =
-      bars[
-        i - 1
-      ];
+    /* --------------------------------------------------------
+       HANDLE EXISTING POSITIONS
+    -------------------------------------------------------- */
+
+    if (openTrades.length) {
+
+      const stillOpen =
+        [];
 
 
-    const atrValue =
-
-      atr5[i]
-
-      ||
-
-      atr5[
-        i - 1
-      ]
-
-      ||
-
-      bar.close *
-      0.001;
-
-
-    /* ===================================================
-       REMOVE OLD PIVOTS
-    =================================================== */
-
-    pruneLevels(
-      pivotHighs,
-      i
-    );
-
-
-    pruneLevels(
-      pivotLows,
-      i
-    );
-
-
-    /* ===================================================
-       PROCESS SETUPS ONLY IF NO POSITION WOULD BE OPEN
-    =================================================== */
-
-    if (
-      i >
-      blockedUntil
-    ) {
-
-      /* =================================================
-         PENDING SWEEP CONFIRMATION
-      ================================================= */
-
-      if (
-        pending
+      for (
+        const trade of openTrades
       ) {
 
-        const barsAfterSweep =
-          i -
-          pending.sweepIndex;
+        const resolution =
+          evaluateTradeBar(
 
+            trade,
 
-        if (
-          barsAfterSweep >= 1
+            current,
 
-          &&
+            settings
 
-          barsAfterSweep <= 2
-        ) {
+          );
 
-          const confirmation =
-            confirmSweep({
 
-              pending,
+        if (resolution.closed) {
 
-              bar,
+          finalizeTrade(
 
-              atrValue
+            trade,
 
-            });
+            resolution,
 
+            current,
 
-          if (
-            confirmation
-          ) {
+            i,
 
-            const quality =
-              calculateQuality({
+            settings
 
-                pending,
+          );
 
-                confirmationBar:
-                  bar,
 
-                confirmationIndex:
-                  i,
+          trades.push(
+            trade
+          );
 
-                atrValue,
 
-                bars,
+          balance +=
+            trade.pnlCash;
 
-                m5States,
 
-                m15,
-
-                m15States,
-
-                h1,
-
-                h1States,
-
-                delta3,
-
-                delta9
-
-              });
-
-
-            if (
-              quality.score >=
-              config.minScore
-
-              &&
-
-              i + 1 <
-              bars.length
-
-              &&
-
-              trades.length <
-              config.maxTrades
-            ) {
-
-              const entryIndex =
-                i + 1;
-
-
-              const riskAmount =
-
-                balance
-
-                *
-
-                (
-                  config.riskPercent /
-                  100
-                );
-
-
-              const trade =
-                simulateTrade({
-
-                  bars,
-
-                  entryIndex,
-
-                  pending,
-
-                  quality,
-
-                  config,
-
-                  atrValue,
-
-                  riskAmount,
-
-                  startingBalance:
-                    balance
-
-                });
-
-
-              trades.push(
-                trade
-              );
-
-
-              balance =
-                trade.endingBalance;
-
-
-              equityCurve.push({
-
-                trade:
-                  trades.length,
-
-                balance:
-                  round(
-                    balance,
-                    2
-                  )
-
-              });
-
-
-              blockedUntil =
-                trade.exitIndex;
-
-
-              pending =
-                null;
-
-            }
-
-            else {
-
-              rejectedSignals++;
-
-
-              pending =
-                null;
-
-            }
-
-          }
-
-          else if (
-            barsAfterSweep >= 2
-          ) {
-
-            rejectedSignals++;
-
-
-            pending =
-              null;
-
-          }
-
-        }
-
-      }
-
-
-      /* =================================================
-         LOOK FOR A NEW SWEEP
-      ================================================= */
-
-      if (
-        !pending
-
-        &&
-
-        i >
-        blockedUntil
-
-        &&
-
-        trades.length <
-        config.maxTrades
-      ) {
-
-        const staticLevels =
-          getStaticLevels({
-
-            bar,
-
-            previous,
-
-            context:
-              contexts,
-
-            index:
-              i,
-
-            used:
-              usedStaticLevels
-
-          });
-
-
-        const highLevels = [
-
-          ...pivotHighs
-            .filter(
-              x =>
-                !x.used
-            ),
-
-          ...staticLevels
-            .filter(
-              x =>
-                x.side ===
-                "HIGH"
-            )
-
-        ];
-
-
-        const lowLevels = [
-
-          ...pivotLows
-            .filter(
-              x =>
-                !x.used
-            ),
-
-          ...staticLevels
-            .filter(
-              x =>
-                x.side ===
-                "LOW"
-            )
-
-        ];
-
-
-        const sweep =
-          detectSweep({
-
-            bar,
-
-            previous,
-
-            atrValue,
-
-            highLevels,
-
-            lowLevels
-
-          });
-
-
-        if (
-          sweep
-        ) {
-
-          pending = {
-
-            ...sweep,
-
-            sweepIndex:
-              i,
-
-            sweepTime:
-              bar.ts,
-
-            sweepOpen:
-              bar.open,
-
-            sweepHigh:
-              bar.high,
-
-            sweepLow:
-              bar.low,
-
-            sweepClose:
-              bar.close,
-
-            atrAtSweep:
-              atrValue
-
-          };
-
-
-          if (
-            sweep.level.dynamicRef
-          ) {
-
-            sweep.level.dynamicRef.used =
-              true;
-
-          }
-
-
-          if (
-            sweep.level.staticKey
-          ) {
-
-            usedStaticLevels.add(
-              sweep.level.staticKey
+          peakBalance =
+            Math.max(
+              peakBalance,
+              balance
             );
 
-          }
+
+          const dd =
+
+            peakBalance > 0
+
+              ?
+
+              (
+                peakBalance -
+                balance
+              )
+
+              /
+              peakBalance
+
+              *
+              100
+
+              :
+
+              0;
+
+
+          maxDrawdownPct =
+            Math.max(
+              maxDrawdownPct,
+              dd
+            );
+
+
+          equityCurve.push({
+
+            time:
+              current.time
+                .toISOString(),
+
+            balance:
+              round(
+                balance,
+                2
+              )
+
+          });
+
+        }
+
+        else {
+
+          stillOpen.push(
+            trade
+          );
 
         }
 
       }
+
+
+      openTrades =
+        stillOpen;
 
     }
 
 
-    /* ===================================================
-       CONFIRM A NEW PIVOT
+    if (
+      trades.length >=
+      settings.maxTrades
+    ) {
+
+      break;
+
+    }
+
+
+    /* --------------------------------------------------------
+       ONE POSITION AT A TIME
+    -------------------------------------------------------- */
+
+    if (
+
+      settings.oneTradeAtATime
+
+      &&
+
+      openTrades.length >
+      0
+
+    ) {
+
+      skipped.positionLimit++;
+      continue;
+
+    }
+
+
+    /* --------------------------------------------------------
+       COOLDOWN
+    -------------------------------------------------------- */
+
+    if (
+
+      i -
+      lastEntryIndex
+
+      <=
+
+      settings.cooldownBars
+
+    ) {
+
+      skipped.cooldown++;
+      continue;
+
+    }
+
+
+    /* --------------------------------------------------------
+       SESSION FILTER
+    -------------------------------------------------------- */
+
+    if (
+      !sessionAllowed(
+        current.time,
+        settings.sessionFilter
+      )
+    ) {
+
+      skipped.session++;
+      continue;
+
+    }
+
+
+    /* --------------------------------------------------------
+       BUILD HISTORICAL STATE
 
        IMPORTANT:
-       This happens AFTER sweep detection.
+       history ends at candle i.
+       Entry = candle i + 1 OPEN.
+    -------------------------------------------------------- */
 
-       Therefore today's candle cannot sweep a pivot that
-       only became known at this candle close.
-    =================================================== */
-
-    const pivotIndex =
-      i -
-      PIVOT_RIGHT;
+    const state =
+      buildHistoricalState(
+        bars,
+        i
+      );
 
 
     if (
-      pivotIndex >
-      PIVOT_LEFT
+      !state ||
+      !state.pools.length
+    ) {
+
+      continue;
+
+    }
+
+
+    const qualifying =
+      [];
+
+
+    for (
+      const pool of state.pools
     ) {
 
       if (
-        isPivotHigh(
-
-          bars,
-
-          pivotIndex,
-
-          PIVOT_LEFT,
-
-          PIVOT_RIGHT
-
-        )
+        pool.raidStrength <
+        settings.minRaidScore
       ) {
 
-        const level = {
-
-          side:
-            "HIGH",
-
-          type:
-            "M5_SWING_HIGH",
-
-          name:
-            "M5 Swing High",
-
-          price:
-            bars[
-              pivotIndex
-            ].high,
-
-          importance:
-            1,
-
-          pivotIndex,
-
-          createdIndex:
-            i,
-
-          used:
-            false
-
-        };
-
-
-        level.dynamicRef =
-          level;
-
-
-        pivotHighs.push(
-          level
-        );
+        skipped.lowRaid++;
+        continue;
 
       }
 
 
       if (
-        isPivotLow(
-
-          bars,
-
-          pivotIndex,
-
-          PIVOT_LEFT,
-
-          PIVOT_RIGHT
-
-        )
+        pool.liquidityStrength <
+        settings.minLiquidityStrength
       ) {
 
-        const level = {
+        skipped.lowLiquidity++;
+        continue;
 
-          side:
-            "LOW",
+      }
 
-          type:
-            "M5_SWING_LOW",
 
-          name:
-            "M5 Swing Low",
+      if (
+        pool.combinedQuality <
+        settings.minCombinedQuality
+      ) {
 
-          price:
-            bars[
-              pivotIndex
-            ].low,
+        skipped.lowQuality++;
+        continue;
 
-          importance:
-            1,
+      }
 
-          pivotIndex,
 
-          createdIndex:
+      if (
+        pool.distanceAtr >
+        settings.maxDistanceAtr
+      ) {
+
+        skipped.tooFar++;
+        continue;
+
+      }
+
+
+      if (
+
+        !settings.allowDormant
+
+        &&
+
+        pool.stage ===
+        "DORMANT"
+
+      ) {
+
+        skipped.dormant++;
+        continue;
+
+      }
+
+
+      const direction =
+
+        pool.side === "HIGH"
+
+          ? "BUY"
+
+          : "SELL";
+
+
+      if (
+
+        settings.tradeSide !==
+        "BOTH"
+
+        &&
+
+        settings.tradeSide !==
+        direction
+
+      ) {
+
+        skipped.wrongSide++;
+        continue;
+
+      }
+
+
+      qualifying.push(
+        pool
+      );
+
+    }
+
+
+    if (!qualifying.length) {
+
+      continue;
+
+    }
+
+
+    /*
+       "Trade every liquidity setup"
+
+       If oneTradeAtATime = false, every qualifying pool can
+       create a trade.
+
+       If true, highest Raid Strength setup is selected.
+    */
+
+    const setups =
+      settings.oneTradeAtATime
+
+        ?
+
+        [
+          qualifying
+            .sort(
+              sortPools
+            )[0]
+        ]
+
+        :
+
+        qualifying
+          .sort(
+            sortPools
+          );
+
+
+    for (
+      const setup of setups
+    ) {
+
+      if (
+        trades.length +
+        openTrades.length >=
+        settings.maxTrades
+      ) {
+
+        break;
+
+      }
+
+
+      const next =
+        bars[i + 1];
+
+
+      const trade =
+        createTrade({
+
+          setup,
+
+          entryBar:
+            next,
+
+          signalBar:
+            current,
+
+          signalIndex:
             i,
 
-          used:
-            false
+          entryIndex:
+            i + 1,
 
-        };
+          state,
+
+          balance,
+
+          settings
+
+        });
 
 
-        level.dynamicRef =
-          level;
+      if (!trade) {
+
+        skipped.invalidTarget++;
+        continue;
+
+      }
 
 
-        pivotLows.push(
-          level
-        );
+      openTrades.push(
+        trade
+      );
+
+
+      lastEntryIndex =
+        i + 1;
+
+
+      if (
+        settings.oneTradeAtATime
+      ) {
+
+        break;
 
       }
 
@@ -1615,218 +1142,167 @@ function runBacktest(
   }
 
 
-  /* =====================================================
-     METRICS
-  ===================================================== */
+  /* ========================================================
+     FORCE CLOSE REMAINING POSITIONS
+  ======================================================== */
 
-  const metrics =
-    calculateMetrics({
+  const finalBar =
+    bars.at(-1);
+
+
+  for (
+    const trade of openTrades
+  ) {
+
+    closeAtEnd(
+      trade,
+      finalBar,
+      bars.length - 1,
+      settings
+    );
+
+
+    trades.push(
+      trade
+    );
+
+
+    balance +=
+      trade.pnlCash;
+
+  }
+
+
+  /* ========================================================
+     RESULTS
+  ======================================================== */
+
+  const summary =
+    summarizeTrades({
 
       trades,
 
-      config,
+      settings,
 
-      finalBalance:
+      startingBalance:
+        settings.startingBalance,
+
+      endingBalance:
         balance,
 
-      equityCurve,
-
-      rejectedSignals
+      maxDrawdownPct
 
     });
 
 
+  const raidBuckets =
+    groupByRaidScore(
+      trades
+    );
+
+
+  const typeStats =
+    groupByLiquidityType(
+      trades
+    );
+
+
+  const sideStats =
+    groupBySide(
+      trades
+    );
+
+
+  const sessionStats =
+    groupBySession(
+      trades
+    );
+
+
   return {
 
-    metrics,
+    summary,
+
+    skipped,
+
+    raidBuckets,
+
+    typeStats,
+
+    sideStats,
+
+    sessionStats,
 
     equityCurve,
 
     trades:
       trades
-        .slice()
-        .reverse()
-        .slice(
-          0,
-          300
-        )
+        .slice(-1000)
+        .map(cleanTradeForOutput)
 
   };
 
 }
 
 
-/* =========================================================
-   SWEEP DETECTION
-========================================================= */
+/* ============================================================
+   HISTORICAL STATE
+============================================================ */
 
-function detectSweep({
+function buildHistoricalState(
+  allBars,
+  endIndex
+) {
 
-  bar,
-
-  previous,
-
-  atrValue,
-
-  highLevels,
-
-  lowLevels
-
-}) {
-
-  const minimumPenetration =
-    Math.max(
-
-      atrValue *
-      0.025,
-
-      bar.close *
-      0.000015
-
+  const m5 =
+    allBars.slice(
+      Math.max(
+        0,
+        endIndex - 1200
+      ),
+      endIndex + 1
     );
 
 
-  const highSweeps =
-    highLevels
+  if (m5.length < 250) {
 
-      .filter(
-        level => {
+    return null;
 
-          /*
-            Price should have been at/below liquidity
-            before sweeping it.
-          */
-
-          const previouslyBelow =
-
-            previous.close <=
-
-            level.price
-
-            +
-
-            atrValue *
-            0.12;
+  }
 
 
-          const penetrated =
-
-            bar.high >=
-
-            level.price
-
-            +
-
-            minimumPenetration;
+  const current =
+    m5.at(-1);
 
 
-          const rejected =
-
-            bar.close <
-            level.price;
+  const price =
+    current.close;
 
 
-          return (
-
-            previouslyBelow
-
-            &&
-
-            penetrated
-
-            &&
-
-            rejected
-
-          );
-
-        }
-      );
-
-
-  const lowSweeps =
-    lowLevels
-
-      .filter(
-        level => {
-
-          const previouslyAbove =
-
-            previous.close >=
-
-            level.price
-
-            -
-
-            atrValue *
-            0.12;
-
-
-          const penetrated =
-
-            bar.low <=
-
-            level.price
-
-            -
-
-            minimumPenetration;
-
-
-          const rejected =
-
-            bar.close >
-            level.price;
-
-
-          return (
-
-            previouslyAbove
-
-            &&
-
-            penetrated
-
-            &&
-
-            rejected
-
-          );
-
-        }
-      );
-
-
-  const bestHigh =
-    chooseLevel(
-
-      highSweeps,
-
-      previous.close,
-
-      atrValue
-
+  const m15 =
+    resample(
+      m5,
+      15
     );
 
 
-  const bestLow =
-    chooseLevel(
+  const h1 =
+    resample(
+      m5,
+      60
+    );
 
-      lowSweeps,
 
-      previous.close,
-
-      atrValue
-
+  const h4 =
+    resample(
+      m5,
+      240
     );
 
 
   if (
-    !bestHigh
-
-    &&
-
-    !bestLow
+    m15.length < 50 ||
+    h1.length < 20
   ) {
 
     return null;
@@ -1834,880 +1310,636 @@ function detectSweep({
   }
 
 
-  /* =====================================================
-     OUTSIDE BAR THAT SWEEPS BOTH SIDES
-  ===================================================== */
-
-  if (
-    bestHigh
-
-    &&
-
-    bestLow
-  ) {
-
-    const range =
-      Math.max(
-
-        bar.high -
-        bar.low,
-
-        1e-9
-
-      );
+  const atr5 =
+    lastFinite(
+      atrSeries(
+        m5,
+        14
+      )
+    ) || 1;
 
 
-    const upperWick =
-
-      bar.high
-
-      -
-
-      Math.max(
-        bar.open,
-        bar.close
-      );
+  const atr15 =
+    lastFinite(
+      atrSeries(
+        m15,
+        14
+      )
+    ) || atr5;
 
 
-    const lowerWick =
+  const atrH1 =
+    lastFinite(
+      atrSeries(
+        h1,
+        14
+      )
+    ) || atr15;
 
-      Math.min(
-        bar.open,
-        bar.close
+
+  const structure = {
+
+    m5:
+      timeframeState(
+        m5
+      ),
+
+    m15:
+      timeframeState(
+        m15
+      ),
+
+    h1:
+      timeframeState(
+        h1
+      ),
+
+    h4:
+      timeframeState(
+        h4
       )
 
-      -
-
-      bar.low;
+  };
 
 
-    const upperRatio =
-      upperWick /
-      range;
+  const sessions =
+    buildSessionLevels(
+      m5,
+      current.time
+    );
 
 
-    const lowerRatio =
-      lowerWick /
-      range;
+  const reference =
+    buildReferenceLevelsHistorical(
+      h1,
+      current.time
+    );
 
 
-    if (
-      Math.abs(
-        upperRatio -
-        lowerRatio
-      ) <
-      0.08
-    ) {
-
-      return null;
-
-    }
+  const equalLevels =
+    detectEqualLiquidity(
+      m15,
+      atr15
+    );
 
 
-    if (
-      upperRatio >
-      lowerRatio
-    ) {
-
-      return {
-
-        direction:
-          "SELL",
-
-        level:
-          bestHigh
-
-      };
-
-    }
+  const swings =
+    pivots(
+      h1,
+      3,
+      150
+    );
 
 
-    return {
-
-      direction:
-        "BUY",
-
-      level:
-        bestLow
-
-    };
-
-  }
+  const flow =
+    buildFlowEngine(
+      m5
+    );
 
 
-  if (
-    bestHigh
-  ) {
+  const regime =
+    buildMarketRegime({
 
-    return {
+      structure,
 
-      direction:
-        "SELL",
+      m5,
 
-      level:
-        bestHigh
+      atr5,
 
-    };
+      flow
 
-  }
+    });
+
+
+  const profile =
+    buildActivityProfile(
+      m5.slice(-400),
+      36
+    );
+
+
+  const rawPools =
+    buildLiquidityPools({
+
+      price,
+
+      sessions,
+
+      reference,
+
+      equalLevels,
+
+      h1Swings:
+        swings,
+
+      atrH1
+
+    });
+
+
+  const pools =
+    rawPools
+
+      .map(pool =>
+
+        scoreHistoricalLiquidityPool({
+
+          pool,
+
+          price,
+
+          atr5,
+
+          atr15,
+
+          structure,
+
+          flow,
+
+          regime,
+
+          profile
+
+        })
+
+      )
+
+      .filter(Boolean)
+
+      .sort(
+        sortPools
+      )
+
+      .slice(
+        0,
+        16
+      );
 
 
   return {
 
-    direction:
-      "BUY",
+    time:
+      current.time,
 
-    level:
-      bestLow
+    price,
+
+    atr5,
+
+    atr15,
+
+    atrH1,
+
+    structure,
+
+    sessions,
+
+    reference,
+
+    equalLevels,
+
+    flow,
+
+    regime,
+
+    profile,
+
+    pools
 
   };
 
 }
 
 
-/* =========================================================
-   CHOOSE STRONGEST LEVEL
-========================================================= */
+/* ============================================================
+   SCORE POOL
+============================================================ */
 
-function chooseLevel(
-  levels,
-  previousPrice,
-  atrValue
-) {
+function scoreHistoricalLiquidityPool({
 
-  if (
-    !levels.length
-  ) {
+  pool,
+
+  price,
+
+  atr5,
+
+  atr15,
+
+  structure,
+
+  flow,
+
+  regime,
+
+  profile
+
+}) {
+
+  const direction =
+
+    pool.side === "HIGH"
+
+      ? 1
+
+      : -1;
+
+
+  const distance =
+    Math.abs(
+      pool.level -
+      price
+    );
+
+
+  const distanceAtr =
+
+    distance /
+    Math.max(
+      atr15,
+      0.000001
+    );
+
+
+  const correctSide =
+
+    pool.side === "HIGH"
+
+      ?
+
+      pool.level >
+      price
+
+      :
+
+      pool.level <
+      price;
+
+
+  if (!correctSide) {
 
     return null;
 
   }
 
 
-  return levels
+  /* ========================================================
+     LIQUIDITY STRENGTH
+  ======================================================== */
 
-    .slice()
+  let liquidityStrength =
 
-    .sort(
-      (
-        a,
-        b
-      ) => {
+    30 +
 
-        const distanceA =
-
-          Math.abs(
-
-            a.price -
-            previousPrice
-
-          )
-
-          /
-
-          Math.max(
-            atrValue,
-            1e-9
-          );
-
-
-        const distanceB =
-
-          Math.abs(
-
-            b.price -
-            previousPrice
-
-          )
-
-          /
-
-          Math.max(
-            atrValue,
-            1e-9
-          );
-
-
-        const scoreA =
-
-          a.importance *
-          12
-
-          -
-
-          distanceA;
-
-
-        const scoreB =
-
-          b.importance *
-          12
-
-          -
-
-          distanceB;
-
-
-        return (
-          scoreB -
-          scoreA
-        );
-
-      }
-    )[0];
-
-}
-
-
-/* =========================================================
-   FOLLOW-THROUGH CONFIRMATION
-========================================================= */
-
-function confirmSweep({
-
-  pending,
-
-  bar,
-
-  atrValue
-
-}) {
-
-  const level =
-    pending.level.price;
-
-
-  const away =
-
-    Math.max(
-
-      atrValue *
-      0.03,
-
-      level *
-      0.000015
-
-    );
+    pool.importance *
+    30;
 
 
   if (
-    pending.direction ===
-    "SELL"
+    pool.type === "PDH" ||
+    pool.type === "PDL"
   ) {
 
-    const closeAway =
-
-      bar.close <=
-
-      level -
-      away;
-
-
-    const lowerClose =
-
-      bar.close <
-      pending.sweepClose;
-
-
-    const bearishBody =
-
-      bar.close <
-      bar.open;
-
-
-    return (
-
-      closeAway
-
-      &&
-
-      lowerClose
-
-      &&
-
-      (
-        bearishBody
-
-        ||
-
-        bar.close <
-        bar.low
-
-        +
-
-        (
-          bar.high -
-          bar.low
-        )
-
-        *
-        0.55
-      )
-
-    );
+    liquidityStrength += 8;
 
   }
 
 
-  const closeAway =
+  if (
+    pool.type === "PWH" ||
+    pool.type === "PWL"
+  ) {
 
-    bar.close >=
+    liquidityStrength += 12;
 
-    level +
-    away;
-
-
-  const higherClose =
-
-    bar.close >
-    pending.sweepClose;
+  }
 
 
-  const bullishBody =
+  if (
+    pool.type === "EQH" ||
+    pool.type === "EQL"
+  ) {
 
-    bar.close >
-    bar.open;
+    liquidityStrength += 10;
+
+  }
 
 
-  return (
+  if (pool.aliases.length) {
 
-    closeAway
+    liquidityStrength +=
 
-    &&
+      Math.min(
+        12,
+        pool.aliases.length * 4
+      );
 
-    higherClose
+  }
 
-    &&
 
-    (
-      bullishBody
+  const profileNodes = [
 
-      ||
+    profile.poc,
 
-      bar.close >
-      bar.low
+    ...profile.hvn
 
-      +
-
-      (
-        bar.high -
-        bar.low
-      )
-
-      *
-      0.45
-    )
-
+  ].filter(
+    Number.isFinite
   );
 
-}
-
-
-/* =========================================================
-   QUALITY SCORE
-========================================================= */
-
-function calculateQuality({
-
-  pending,
-
-  confirmationBar,
-
-  confirmationIndex,
-
-  atrValue,
-
-  bars,
-
-  m5States,
-
-  m15,
-
-  m15States,
-
-  h1,
-
-  h1States,
-
-  delta3,
-
-  delta9
-
-}) {
-
-  let score =
-    35;
-
-
-  const reasons = [
-
-    "Confirmed liquidity sweep"
-
-  ];
-
-
-  const direction =
-    pending.direction;
-
-
-  const sweepBar =
-    bars[
-      pending.sweepIndex
-    ];
-
-
-  /* =====================================================
-     LIQUIDITY IMPORTANCE
-  ===================================================== */
-
-  const importanceBonus =
-    clamp(
-
-      (
-        pending.level.importance -
-        1
-      )
-
-      *
-      18,
-
-      0,
-
-      8
-
-    );
-
-
-  score +=
-    importanceBonus;
-
 
   if (
-    importanceBonus >
-    0
-  ) {
+    profileNodes.some(
 
-    reasons.push(
-      pending.level.name
-    );
+      node =>
 
-  }
-
-
-  /* =====================================================
-     WICK REJECTION
-  ===================================================== */
-
-  const range =
-    Math.max(
-
-      sweepBar.high -
-      sweepBar.low,
-
-      1e-9
-
-    );
-
-
-  let rejectionRatio;
-
-
-  if (
-    direction ===
-    "SELL"
-  ) {
-
-    rejectionRatio =
-
-      (
-        sweepBar.high
-
-        -
-
-        Math.max(
-
-          sweepBar.open,
-
-          sweepBar.close
-
-        )
-      )
-
-      /
-
-      range;
-
-  }
-
-  else {
-
-    rejectionRatio =
-
-      (
-        Math.min(
-
-          sweepBar.open,
-
-          sweepBar.close
-
+        Math.abs(
+          node -
+          pool.level
         )
 
-        -
+        <=
 
-        sweepBar.low
-      )
+        atr5 *
+        0.25
 
-      /
+    )
+  ) {
 
-      range;
+    liquidityStrength += 8;
 
   }
 
 
-  const rejectionBonus =
+  liquidityStrength =
     clamp(
-
-      rejectionRatio *
-      20,
-
-      0,
-
-      14
-
-    );
-
-
-  score +=
-    rejectionBonus;
-
-
-  if (
-    rejectionRatio >=
-    0.3
-  ) {
-
-    reasons.push(
-      "Strong sweep wick rejection"
-    );
-
-  }
-
-
-  /* =====================================================
-     M5 STRUCTURE
-  ===================================================== */
-
-  const m5 =
-    m5States[
-      confirmationIndex
-    ];
-
-
-  const m5Pass =
-    stateSupports(
-
-      m5,
-
-      direction
-
-    );
-
-
-  if (
-    m5Pass
-  ) {
-
-    score +=
-      10;
-
-
-    reasons.push(
-      "M5 structure aligned"
-    );
-
-  }
-
-
-  /* =====================================================
-     COMPLETED M15
-  ===================================================== */
-
-  const confirmTime =
-
-    confirmationBar.ts
-
-    +
-
-    BAR_MS;
-
-
-  const m15State =
-    completedStateAt(
-
-      m15,
-
-      m15States,
-
-      confirmTime,
-
-      15
-
-    );
-
-
-  const m15Pass =
-    stateSupports(
-
-      m15State,
-
-      direction
-
-    );
-
-
-  if (
-    m15Pass
-  ) {
-
-    score +=
-      10;
-
-
-    reasons.push(
-      "M15 structure aligned"
-    );
-
-  }
-
-
-  /* =====================================================
-     COMPLETED H1
-  ===================================================== */
-
-  const h1State =
-    completedStateAt(
-
-      h1,
-
-      h1States,
-
-      confirmTime,
-
-      60
-
-    );
-
-
-  const h1Pass =
-    stateSupports(
-
-      h1State,
-
-      direction
-
-    );
-
-
-  if (
-    h1Pass
-  ) {
-
-    score +=
-      5;
-
-
-    reasons.push(
-      "H1 structure aligned"
-    );
-
-  }
-
-
-  /* =====================================================
-     DELTA DIRECTION
-  ===================================================== */
-
-  const fastDelta =
-    delta3[
-      confirmationIndex
-    ];
-
-
-  const slowDelta =
-    delta9[
-      confirmationIndex
-    ];
-
-
-  const deltaPass =
-
-    direction ===
-    "SELL"
-
-      ?
-
-      fastDelta <
-      -3
-
-      :
-
-      fastDelta >
-      3;
-
-
-  if (
-    deltaPass
-  ) {
-
-    score +=
-      10;
-
-
-    reasons.push(
-      "Short-term delta aligned"
-    );
-
-  }
-
-
-  /* =====================================================
-     DELTA ACCELERATION
-  ===================================================== */
-
-  const deltaAcceleration =
-
-    direction ===
-    "SELL"
-
-      ?
-
-      fastDelta <
-      slowDelta -
-      2
-
-      :
-
-      fastDelta >
-      slowDelta +
-      2;
-
-
-  if (
-    deltaAcceleration
-  ) {
-
-    score +=
-      5;
-
-
-    reasons.push(
-      "Delta acceleration"
-    );
-
-  }
-
-
-  /* =====================================================
-     VOLATILITY / DISPLACEMENT
-  ===================================================== */
-
-  const confirmRange =
-
-    confirmationBar.high
-
-    -
-
-    confirmationBar.low;
-
-
-  if (
-    confirmRange >=
-    atrValue *
-    0.8
-  ) {
-
-    score +=
-      4;
-
-
-    reasons.push(
-      "Confirmation displacement"
-    );
-
-  }
-
-
-  /* =====================================================
-     SESSION
-  ===================================================== */
-
-  const session =
-    sessionContext(
-      confirmationBar.ts
-    );
-
-
-  if (
-    session.majorOpeningWindow
-  ) {
-
-    score +=
-      5;
-
-
-    reasons.push(
-      `${session.name} opening liquidity window`
-    );
-
-  }
-
-  else if (
-    session.majorActive
-  ) {
-
-    score +=
-      2;
-
-  }
-
-
-  score =
-    clamp(
-      score,
+      liquidityStrength,
       0,
       100
     );
 
 
+  /* ========================================================
+     RAID SCORE
+
+     V4 live score used:
+     M1
+     M5
+     M15
+     H1
+     H4
+
+     This historical backtest only downloads M5 with API 4,
+     therefore weights are redistributed to:
+
+     M5  = 25%
+     M15 = 35%
+     H1  = 25%
+     H4  = 15%
+  ======================================================== */
+
+  const mtfPressure =
+
+    structure.m5.score *
+    0.25
+
+    +
+
+    structure.m15.score *
+    0.35
+
+    +
+
+    structure.h1.score *
+    0.25
+
+    +
+
+    structure.h4.score *
+    0.15;
+
+
+  const directionalTrend =
+    direction *
+    mtfPressure;
+
+
+  const delta =
+    flow.m15?.deltaPct || 0;
+
+
+  let raidStrength =
+
+    50 *
+    Math.exp(
+      -distanceAtr /
+      1.25
+    )
+
+    +
+
+    20;
+
+
+  raidStrength +=
+
+    clamp(
+      directionalTrend / 6,
+      -15,
+      15
+    );
+
+
+  raidStrength +=
+
+    clamp(
+      direction *
+      delta /
+      2.8,
+      -12,
+      12
+    );
+
+
+  if (
+    regime.volatility ===
+    "EXPANDING"
+  ) {
+
+    raidStrength += 8;
+
+  }
+
+
+  raidStrength =
+    clamp(
+      raidStrength,
+      0,
+      100
+    );
+
+
+  /* ========================================================
+     COMBINED QUALITY
+
+     Historical match and FRED are deliberately excluded here
+     so we do not accidentally inject current macro data into
+     historical candles.
+  ======================================================== */
+
+  const quality =
+
+    liquidityStrength *
+    0.45
+
+    +
+
+    raidStrength *
+    0.55;
+
+
+  /* ========================================================
+     APPROXIMATE SWEEP ZONE
+  ======================================================== */
+
+  let overshootAtr =
+    0.20;
+
+
+  if (
+    raidStrength >= 80
+  ) {
+
+    overshootAtr =
+      0.30;
+
+  }
+
+
+  if (
+    raidStrength >= 90
+  ) {
+
+    overshootAtr =
+      0.40;
+
+  }
+
+
+  if (
+    regime.volatility ===
+    "EXPANDING"
+  ) {
+
+    overshootAtr *=
+      1.15;
+
+  }
+
+
+  const sweepTarget =
+
+    pool.level
+
+    +
+
+    direction *
+    atr5 *
+    overshootAtr;
+
+
+  const stage =
+
+    distanceAtr <= 0.20
+
+      ?
+
+      "RAID IMMINENT"
+
+      :
+
+      distanceAtr <= 0.50
+
+        ?
+
+        "APPROACHING"
+
+        :
+
+        distanceAtr <= 1.25
+
+          ?
+
+          "TRACKING"
+
+          :
+
+          "DORMANT";
+
+
   return {
 
-    score:
+    ...pool,
+
+    distance:
       round(
-        score,
+        distance,
+        3
+      ),
+
+    distanceAtr:
+      round(
+        distanceAtr,
+        3
+      ),
+
+    liquidityStrength:
+      round(
+        liquidityStrength,
         1
       ),
 
-    reasons,
+    raidStrength:
+      round(
+        raidStrength,
+        1
+      ),
 
-    checks: {
+    combinedQuality:
+      round(
+        quality,
+        1
+      ),
 
-      m5:
-        m5Pass,
+    mtfPressure:
+      round(
+        mtfPressure,
+        1
+      ),
 
-      m15:
-        m15Pass,
+    directionalTrend:
+      round(
+        directionalTrend,
+        1
+      ),
 
-      h1:
-        h1Pass,
+    delta:
+      round(
+        delta,
+        1
+      ),
 
-      delta:
-        deltaPass,
+    stage,
 
-      deltaAcceleration,
+    projectedSweep: {
 
-      rejectionRatio:
+      target:
         round(
-          rejectionRatio,
+          sweepTarget,
+          3
+        ),
+
+      overshootAtr:
+        round(
+          overshootAtr,
           3
         )
 
@@ -2718,697 +1950,244 @@ function calculateQuality({
 }
 
 
-/* =========================================================
-   SIMULATE TRADE
-========================================================= */
+/* ============================================================
+   CREATE TRADE
+============================================================ */
 
-function simulateTrade({
+function createTrade({
 
-  bars,
+  setup,
+
+  entryBar,
+
+  signalBar,
+
+  signalIndex,
 
   entryIndex,
 
-  pending,
+  state,
 
-  quality,
+  balance,
 
-  config,
-
-  atrValue,
-
-  riskAmount,
-
-  startingBalance
+  settings
 
 }) {
 
+  const side =
+
+    setup.side === "HIGH"
+
+      ? "BUY"
+
+      : "SELL";
+
+
   const direction =
-    pending.direction;
+    side === "BUY"
+      ? 1
+      : -1;
 
 
   const rawEntry =
-    bars[
-      entryIndex
-    ].open;
+    entryBar.open;
 
 
-  /*
-    Adverse entry adjustment.
-  */
+  const executionCost =
 
-  const entryCost =
-
-    config.spread /
-    2
+    settings.spread / 2
 
     +
 
-    config.slippage;
+    settings.slippage;
 
 
   const entry =
 
-    direction ===
-    "BUY"
+    rawEntry
 
-      ?
+    +
 
-      rawEntry +
-      entryCost
-
-      :
-
-      rawEntry -
-      entryCost;
+    direction *
+    executionCost;
 
 
-  const buffer =
+  const stopDistance =
 
-    Math.max(
-
-      atrValue *
-      0.25,
-
-      entry *
-      0.00008
-
-    );
-
-
-  let stopLoss;
+    state.atr5 *
+    settings.stopAtr;
 
 
   if (
-    direction ===
-    "SELL"
+    stopDistance <= 0
   ) {
 
-    stopLoss =
-
-      Math.max(
-
-        pending.sweepHigh,
-
-        pending.level.price
-
-      )
-
-      +
-
-      buffer;
+    return null;
 
   }
+
+
+  const stop =
+
+    side === "BUY"
+
+      ?
+
+      entry -
+      stopDistance
+
+      :
+
+      entry +
+      stopDistance;
+
+
+  let target;
+
+
+  if (
+    settings.targetMode ===
+    "LIQUIDITY"
+  ) {
+
+    target =
+      setup.level;
+
+  }
+
+
+  else if (
+    settings.targetMode ===
+    "SWEEP"
+  ) {
+
+    target =
+      setup.projectedSweep.target;
+
+  }
+
 
   else {
 
-    stopLoss =
+    target =
 
-      Math.min(
-
-        pending.sweepLow,
-
-        pending.level.price
-
-      )
-
-      -
-
-      buffer;
-
-  }
-
-
-  let riskDistance =
-    Math.abs(
-
-      entry -
-      stopLoss
-
-    );
-
-
-  /*
-    Prevent ridiculously tiny stops.
-  */
-
-  const minimumRisk =
-
-    atrValue *
-    0.35;
-
-
-  if (
-    riskDistance <
-    minimumRisk
-  ) {
-
-    if (
-      direction ===
-      "BUY"
-    ) {
-
-      stopLoss =
-        entry -
-        minimumRisk;
-
-    }
-
-    else {
-
-      stopLoss =
-        entry +
-        minimumRisk;
-
-    }
-
-
-    riskDistance =
-      minimumRisk;
-
-  }
-
-
-  const tp1 =
-
-    direction ===
-    "BUY"
-
-      ?
-
-      entry
-
-      +
-
-      riskDistance *
-      config.tp1R
-
-      :
-
-      entry
-
-      -
-
-      riskDistance *
-      config.tp1R;
-
-
-  const tp2 =
-
-    direction ===
-    "BUY"
-
-      ?
-
-      entry
-
-      +
-
-      riskDistance *
-      config.tp2R
-
-      :
-
-      entry
-
-      -
-
-      riskDistance *
-      config.tp2R;
-
-
-  let tp1Hit =
-    false;
-
-
-  let realizedR =
-    null;
-
-
-  let exitPrice =
-    null;
-
-
-  let exitIndex =
-    null;
-
-
-  let exitReason =
-    null;
-
-
-  const lastIndex =
-    Math.min(
-
-      bars.length - 1,
-
-      entryIndex
-
-      +
-
-      config.maxHoldBars
-
-    );
-
-
-  /* =====================================================
-     WALK FORWARD
-  ===================================================== */
-
-  for (
-
-    let i =
-      entryIndex;
-
-    i <=
-    lastIndex;
-
-    i++
-
-  ) {
-
-    const bar =
-      bars[i];
-
-
-    /* ===================================================
-       BUY
-    =================================================== */
-
-    if (
-      direction ===
-      "BUY"
-    ) {
-
-      const activeStop =
-
-        tp1Hit
-
-          ?
-
-          entry
-
-          :
-
-          stopLoss;
-
-
-      /*
-        Conservative intrabar assumption:
-        stop is checked before profit targets.
-      */
-
-      if (
-        bar.low <=
-        activeStop
-      ) {
-
-        if (
-          tp1Hit
-        ) {
-
-          realizedR =
-
-            0.5 *
-            config.tp1R;
-
-
-          exitPrice =
-            entry;
-
-
-          exitReason =
-            "BREAKEVEN_AFTER_TP1";
-
-        }
-
-        else {
-
-          realizedR =
-            -1;
-
-
-          exitPrice =
-            stopLoss;
-
-
-          exitReason =
-            "SL";
-
-        }
-
-
-        exitIndex =
-          i;
-
-
-        break;
-
-      }
-
-
-      if (
-        !tp1Hit
-
-        &&
-
-        bar.high >=
-        tp1
-      ) {
-
-        tp1Hit =
-          true;
-
-      }
-
-
-      if (
-        tp1Hit
-
-        &&
-
-        bar.high >=
-        tp2
-      ) {
-
-        realizedR =
-
-          0.5 *
-          config.tp1R
-
-          +
-
-          0.5 *
-          config.tp2R;
-
-
-        exitPrice =
-          tp2;
-
-
-        exitReason =
-          "TP2";
-
-
-        exitIndex =
-          i;
-
-
-        break;
-
-      }
-
-    }
-
-
-    /* ===================================================
-       SELL
-    =================================================== */
-
-    else {
-
-      const activeStop =
-
-        tp1Hit
-
-          ?
-
-          entry
-
-          :
-
-          stopLoss;
-
-
-      if (
-        bar.high >=
-        activeStop
-      ) {
-
-        if (
-          tp1Hit
-        ) {
-
-          realizedR =
-
-            0.5 *
-            config.tp1R;
-
-
-          exitPrice =
-            entry;
-
-
-          exitReason =
-            "BREAKEVEN_AFTER_TP1";
-
-        }
-
-        else {
-
-          realizedR =
-            -1;
-
-
-          exitPrice =
-            stopLoss;
-
-
-          exitReason =
-            "SL";
-
-        }
-
-
-        exitIndex =
-          i;
-
-
-        break;
-
-      }
-
-
-      if (
-        !tp1Hit
-
-        &&
-
-        bar.low <=
-        tp1
-      ) {
-
-        tp1Hit =
-          true;
-
-      }
-
-
-      if (
-        tp1Hit
-
-        &&
-
-        bar.low <=
-        tp2
-      ) {
-
-        realizedR =
-
-          0.5 *
-          config.tp1R
-
-          +
-
-          0.5 *
-          config.tp2R;
-
-
-        exitPrice =
-          tp2;
-
-
-        exitReason =
-          "TP2";
-
-
-        exitIndex =
-          i;
-
-
-        break;
-
-      }
-
-    }
-
-  }
-
-
-  /* =====================================================
-     TIME EXIT
-  ===================================================== */
-
-  if (
-    realizedR ===
-    null
-  ) {
-
-    exitIndex =
-      lastIndex;
-
-
-    exitPrice =
-      bars[
-        exitIndex
-      ].close;
-
-
-    const floatingR =
-
-      direction ===
-      "BUY"
+      side === "BUY"
 
         ?
 
-        (
-          exitPrice -
-          entry
-        )
-
-        /
-        riskDistance
+        entry +
+        stopDistance *
+        settings.rr
 
         :
 
-        (
-          entry -
-          exitPrice
-        )
-
-        /
-        riskDistance;
-
-
-    if (
-      tp1Hit
-    ) {
-
-      realizedR =
-
-        0.5 *
-        config.tp1R
-
-        +
-
-        0.5 *
-        floatingR;
-
-    }
-
-    else {
-
-      realizedR =
-        floatingR;
-
-    }
-
-
-    realizedR =
-      clamp(
-
-        realizedR,
-
-        -1,
-
-        config.tp2R
-
-      );
-
-
-    exitReason =
-      "TIME_EXIT";
+        entry -
+        stopDistance *
+        settings.rr;
 
   }
 
 
-  /* =====================================================
-     APPROXIMATE EXTRA EXIT COST
-  ===================================================== */
+  /*
+     Reject target that is behind entry.
+  */
 
-  const exitCost =
+  if (
 
-    config.spread /
-    2
+    side === "BUY"
 
-    +
+    &&
 
-    config.slippage;
+    target <=
+    entry
 
+  ) {
 
-  const costR =
+    return null;
 
-    riskDistance > 0
-
-      ?
-
-      exitCost /
-      riskDistance
-
-      :
-
-      0;
+  }
 
 
-  realizedR -=
-    costR;
+  if (
+
+    side === "SELL"
+
+    &&
+
+    target >=
+    entry
+
+  ) {
+
+    return null;
+
+  }
 
 
-  /* =====================================================
-     BALANCE
-  ===================================================== */
-
-  const pnl =
-
-    riskAmount
-
-    *
-
-    realizedR;
+  const rewardDistance =
+    Math.abs(
+      target -
+      entry
+    );
 
 
-  const endingBalance =
+  const effectiveRR =
 
-    startingBalance
+    rewardDistance /
+    stopDistance;
 
-    +
 
-    pnl;
+  const riskCash =
+
+    balance *
+    settings.riskPct /
+    100;
 
 
   return {
 
     id:
-      `BT-${entryIndex}-${pending.sweepIndex}`,
+      `${entryBar.time.getTime()}-${setup.type}-${setup.side}`,
 
-    direction,
+    status:
+      "OPEN",
+
+    side,
 
     liquidity:
-      pending.level.name,
+      setup.name,
 
     liquidityType:
-      pending.level.type,
+      setup.type,
 
     liquidityLevel:
       round(
-        pending.level.price,
+        setup.level,
         3
       ),
 
-    score:
-      quality.score,
+    signalTime:
+      signalBar.time
+        .toISOString(),
 
-    reasons:
-      quality.reasons,
+    entryTime:
+      entryBar.time
+        .toISOString(),
+
+    exitTime:
+      null,
+
+    signalIndex,
+
+    entryIndex,
+
+    exitIndex:
+      null,
+
+    session:
+      getTradingSession(
+        entryBar.time
+      ),
 
     entry:
       round(
@@ -3416,160 +2195,461 @@ function simulateTrade({
         3
       ),
 
-    stopLoss:
+    stop:
       round(
-        stopLoss,
+        stop,
         3
       ),
 
-    tp1:
+    target:
       round(
-        tp1,
+        target,
         3
       ),
 
-    tp2:
+    stopDistance:
       round(
-        tp2,
+        stopDistance,
         3
       ),
 
-    riskDistance:
+    rewardDistance:
       round(
-        riskDistance,
+        rewardDistance,
         3
       ),
 
-    riskAmount:
+    effectiveRR:
       round(
-        riskAmount,
+        effectiveRR,
+        3
+      ),
+
+    riskCash:
+      round(
+        riskCash,
         2
       ),
 
-    r:
-      round(
-        realizedR,
-        3
-      ),
+    raidStrength:
+      setup.raidStrength,
 
-    pnl:
-      round(
-        pnl,
-        2
-      ),
+    liquidityStrength:
+      setup.liquidityStrength,
 
-    startingBalance:
-      round(
-        startingBalance,
-        2
-      ),
+    combinedQuality:
+      setup.combinedQuality,
 
-    endingBalance:
-      round(
-        endingBalance,
-        2
-      ),
+    distanceAtr:
+      setup.distanceAtr,
 
-    tp1Hit,
+    stage:
+      setup.stage,
 
-    exitReason,
+    regime:
+      state.regime.label,
 
-    entryTime:
-      new Date(
-        bars[
-          entryIndex
-        ].ts
-      )
-        .toISOString(),
+    mtf: {
 
-    exitTime:
-      new Date(
-        bars[
-          exitIndex
-        ].ts
-      )
-        .toISOString(),
+      m5:
+        state.structure.m5.bias,
 
-    holdBars:
+      m15:
+        state.structure.m15.bias,
 
-      exitIndex
+      h1:
+        state.structure.h1.bias,
 
-      -
+      h4:
+        state.structure.h4.bias
 
-      entryIndex
+    },
 
-      +
+    flowDelta:
+      setup.delta,
 
-      1,
+    result:
+      null,
 
-    entryIndex,
+    exit:
+      null,
 
-    exitIndex
+    pnlR:
+      0,
+
+    pnlCash:
+      0,
+
+    barsHeld:
+      0
 
   };
 
 }
 
 
-/* =========================================================
-   METRICS
-========================================================= */
+/* ============================================================
+   EVALUATE OPEN TRADE
+============================================================ */
 
-function calculateMetrics({
+function evaluateTradeBar(
+  trade,
+  bar,
+  settings
+) {
+
+  const buy =
+    trade.side ===
+    "BUY";
+
+
+  const hitStop =
+
+    buy
+
+      ?
+
+      bar.low <=
+      trade.stop
+
+      :
+
+      bar.high >=
+      trade.stop;
+
+
+  const hitTarget =
+
+    buy
+
+      ?
+
+      bar.high >=
+      trade.target
+
+      :
+
+      bar.low <=
+      trade.target;
+
+
+  if (
+    hitStop &&
+    hitTarget
+  ) {
+
+    if (
+      settings.collisionMode ===
+      "TP_FIRST"
+    ) {
+
+      return {
+
+        closed: true,
+        result: "WIN",
+        exit: trade.target
+
+      };
+
+    }
+
+
+    return {
+
+      closed: true,
+      result: "LOSS",
+      exit: trade.stop
+
+    };
+
+  }
+
+
+  if (hitStop) {
+
+    return {
+
+      closed: true,
+      result: "LOSS",
+      exit: trade.stop
+
+    };
+
+  }
+
+
+  if (hitTarget) {
+
+    return {
+
+      closed: true,
+      result: "WIN",
+      exit: trade.target
+
+    };
+
+  }
+
+
+  return {
+
+    closed: false
+
+  };
+
+}
+
+
+/* ============================================================
+   FINALIZE TRADE
+============================================================ */
+
+function finalizeTrade(
+  trade,
+  resolution,
+  bar,
+  exitIndex,
+  settings
+) {
+
+  const direction =
+    trade.side === "BUY"
+      ? 1
+      : -1;
+
+
+  let exit =
+    resolution.exit;
+
+
+  /*
+     Exit slippage.
+  */
+
+  exit -=
+
+    direction *
+    settings.slippage;
+
+
+  const pnlDistance =
+
+    direction *
+    (
+      exit -
+      trade.entry
+    );
+
+
+  const pnlR =
+
+    pnlDistance /
+    Math.max(
+      trade.stopDistance,
+      0.000001
+    );
+
+
+  trade.status =
+    "CLOSED";
+
+
+  trade.result =
+    resolution.result;
+
+
+  trade.exit =
+    round(
+      exit,
+      3
+    );
+
+
+  trade.exitTime =
+    bar.time
+      .toISOString();
+
+
+  trade.exitIndex =
+    exitIndex;
+
+
+  trade.pnlR =
+    round(
+      pnlR,
+      4
+    );
+
+
+  trade.pnlCash =
+    round(
+
+      trade.riskCash *
+      pnlR,
+
+      2
+
+    );
+
+
+  trade.barsHeld =
+
+    exitIndex -
+    trade.entryIndex +
+    1;
+
+}
+
+
+/* ============================================================
+   FORCE CLOSE
+============================================================ */
+
+function closeAtEnd(
+  trade,
+  bar,
+  index,
+  settings
+) {
+
+  const direction =
+    trade.side === "BUY"
+      ? 1
+      : -1;
+
+
+  const exit =
+
+    bar.close
+
+    -
+
+    direction *
+    settings.slippage;
+
+
+  const pnlDistance =
+
+    direction *
+    (
+      exit -
+      trade.entry
+    );
+
+
+  const pnlR =
+
+    pnlDistance /
+    Math.max(
+      trade.stopDistance,
+      0.000001
+    );
+
+
+  trade.status =
+    "CLOSED";
+
+
+  trade.result =
+
+    pnlR > 0
+
+      ? "FORCED_WIN"
+
+      : pnlR < 0
+
+        ? "FORCED_LOSS"
+
+        : "FLAT";
+
+
+  trade.exit =
+    round(
+      exit,
+      3
+    );
+
+
+  trade.exitTime =
+    bar.time
+      .toISOString();
+
+
+  trade.exitIndex =
+    index;
+
+
+  trade.pnlR =
+    round(
+      pnlR,
+      4
+    );
+
+
+  trade.pnlCash =
+    round(
+
+      trade.riskCash *
+      pnlR,
+
+      2
+
+    );
+
+
+  trade.barsHeld =
+
+    index -
+    trade.entryIndex +
+    1;
+
+}
+
+
+/* ============================================================
+   SUMMARY
+============================================================ */
+
+function summarizeTrades({
 
   trades,
 
-  config,
+  settings,
 
-  finalBalance,
+  startingBalance,
 
-  equityCurve,
+  endingBalance,
 
-  rejectedSignals
+  maxDrawdownPct
 
 }) {
 
-  const total =
-    trades.length;
-
-
   const wins =
     trades.filter(
-      trade =>
-        trade.r >
-        0.001
-    ).length;
+      x =>
+        x.pnlR > 0
+    );
 
 
   const losses =
     trades.filter(
-      trade =>
-        trade.r <
-        -0.001
-    ).length;
+      x =>
+        x.pnlR < 0
+    );
 
 
-  const breakeven =
-    total -
-    wins -
-    losses;
+  const flats =
+    trades.filter(
+      x =>
+        x.pnlR === 0
+    );
 
 
   const grossProfitR =
     sum(
-
-      trades
-
-        .filter(
-          t =>
-            t.r > 0
-        )
-
-        .map(
-          t =>
-            t.r
-        )
-
+      wins.map(
+        x => x.pnlR
+      )
     );
 
 
@@ -3577,19 +2657,9 @@ function calculateMetrics({
     Math.abs(
 
       sum(
-
-        trades
-
-          .filter(
-            t =>
-              t.r < 0
-          )
-
-          .map(
-            t =>
-              t.r
-          )
-
+        losses.map(
+          x => x.pnlR
+        )
       )
 
     );
@@ -3597,13 +2667,39 @@ function calculateMetrics({
 
   const totalR =
     sum(
-
       trades.map(
-        trade =>
-          trade.r
+        x => x.pnlR
       )
-
     );
+
+
+  const avgR =
+
+    trades.length
+
+      ?
+
+      totalR /
+      trades.length
+
+      :
+
+      0;
+
+
+  const winRate =
+
+    trades.length
+
+      ?
+
+      wins.length /
+      trades.length *
+      100
+
+      :
+
+      0;
 
 
   const profitFactor =
@@ -3619,214 +2715,72 @@ function calculateMetrics({
 
       grossProfitR > 0
 
-        ?
+        ? 999
 
-        999
-
-        :
-
-        0;
+        : 0;
 
 
-  const averageR =
+  const avgRaid =
 
-    total
+    trades.length
 
       ?
 
-      totalR /
-      total
-
-      :
-
-      0;
-
-
-  const winRate =
-
-    total
-
-      ?
-
-      wins /
-      total *
-      100
-
-      :
-
-      0;
-
-
-  /* =====================================================
-     DRAWDOWN
-  ===================================================== */
-
-  let peak =
-    config.initialBalance;
-
-
-  let maxDrawdownPct =
-    0;
-
-
-  let maxDrawdownMoney =
-    0;
-
-
-  for (
-    const point of equityCurve
-  ) {
-
-    peak =
-      Math.max(
-
-        peak,
-
-        point.balance
-
-      );
-
-
-    const ddMoney =
-
-      peak -
-      point.balance;
-
-
-    const ddPct =
-
-      peak > 0
-
-        ?
-
-        ddMoney /
-        peak *
-        100
-
-        :
-
-        0;
-
-
-    maxDrawdownPct =
-      Math.max(
-
-        maxDrawdownPct,
-
-        ddPct
-
-      );
-
-
-    maxDrawdownMoney =
-      Math.max(
-
-        maxDrawdownMoney,
-
-        ddMoney
-
-      );
-
-  }
-
-
-  /* =====================================================
-     CONSECUTIVE LOSSES
-  ===================================================== */
-
-  let currentLosses =
-    0;
-
-
-  let maxConsecutiveLosses =
-    0;
-
-
-  for (
-    const trade of trades
-  ) {
-
-    if (
-      trade.r < 0
-    ) {
-
-      currentLosses++;
-
-
-      maxConsecutiveLosses =
-        Math.max(
-
-          maxConsecutiveLosses,
-
-          currentLosses
-
-        );
-
-    }
-
-    else {
-
-      currentLosses =
-        0;
-
-    }
-
-  }
-
-
-  const buys =
-    trades.filter(
-      t =>
-        t.direction ===
-        "BUY"
-    ).length;
-
-
-  const sells =
-    trades.filter(
-      t =>
-        t.direction ===
-        "SELL"
-    ).length;
-
-
-  const tp2 =
-    trades.filter(
-      t =>
-        t.exitReason ===
-        "TP2"
-    ).length;
-
-
-  const sl =
-    trades.filter(
-      t =>
-        t.exitReason ===
-        "SL"
-    ).length;
-
-
-  const breakEvenAfterTp1 =
-    trades.filter(
-      t =>
-        t.exitReason ===
-        "BREAKEVEN_AFTER_TP1"
-    ).length;
-
-
-  const avgHoldBars =
-
-    total
-
-      ?
-
-      avg(
-
+      mean(
         trades.map(
-          t =>
-            t.holdBars
+          x => x.raidStrength
         )
+      )
 
+      :
+
+      0;
+
+
+  const avgLiquidity =
+
+    trades.length
+
+      ?
+
+      mean(
+        trades.map(
+          x => x.liquidityStrength
+        )
+      )
+
+      :
+
+      0;
+
+
+  const avgQuality =
+
+    trades.length
+
+      ?
+
+      mean(
+        trades.map(
+          x => x.combinedQuality
+        )
+      )
+
+      :
+
+      0;
+
+
+  const avgBarsHeld =
+
+    trades.length
+
+      ?
+
+      mean(
+        trades.map(
+          x => x.barsHeld
+        )
       )
 
       :
@@ -3836,30 +2790,39 @@ function calculateMetrics({
 
   const returnPct =
 
-    (
-      finalBalance -
-      config.initialBalance
-    )
+    startingBalance > 0
 
-    /
+      ?
 
-    config.initialBalance
+      (
+        endingBalance -
+        startingBalance
+      )
 
-    *
+      /
+      startingBalance
 
-    100;
+      *
+      100
+
+      :
+
+      0;
 
 
   return {
 
     trades:
-      total,
+      trades.length,
 
-    wins,
+    wins:
+      wins.length,
 
-    losses,
+    losses:
+      losses.length,
 
-    breakeven,
+    flats:
+      flats.length,
 
     winRate:
       round(
@@ -3879,35 +2842,65 @@ function calculateMetrics({
         2
       ),
 
-    averageR:
+    expectancyR:
       round(
-        averageR,
+        avgR,
         3
       ),
 
-    initialBalance:
+    grossProfitR:
       round(
-        config.initialBalance,
+        grossProfitR,
+        2
+      ),
+
+    grossLossR:
+      round(
+        grossLossR,
+        2
+      ),
+
+    averageRaidScore:
+      round(
+        avgRaid,
+        1
+      ),
+
+    averageLiquidityStrength:
+      round(
+        avgLiquidity,
+        1
+      ),
+
+    averageCombinedQuality:
+      round(
+        avgQuality,
+        1
+      ),
+
+    averageBarsHeld:
+      round(
+        avgBarsHeld,
+        1
+      ),
+
+    startingBalance:
+      round(
+        startingBalance,
         2
       ),
 
     endingBalance:
       round(
-        finalBalance,
+        endingBalance,
         2
       ),
 
     netProfit:
       round(
-
-        finalBalance
-
-        -
-
-        config.initialBalance,
-
+        endingBalance -
+        startingBalance,
         2
-
       ),
 
     returnPct:
@@ -3922,76 +2915,609 @@ function calculateMetrics({
         2
       ),
 
-    maxDrawdownMoney:
-      round(
-        maxDrawdownMoney,
-        2
-      ),
+    settings: {
 
-    maxConsecutiveLosses,
+      raidThreshold:
+        settings.minRaidScore,
 
-    averageHoldBars:
-      round(
-        avgHoldBars,
-        1
-      ),
+      targetMode:
+        settings.targetMode,
 
-    averageHoldMinutes:
-      round(
-        avgHoldBars *
-        5,
-        1
-      ),
+      rr:
+        settings.rr,
 
-    buys,
+      stopAtr:
+        settings.stopAtr
 
-    sells,
-
-    tp2Hits:
-      tp2,
-
-    stopLosses:
-      sl,
-
-    tp1Breakevens:
-      breakEvenAfterTp1,
-
-    rejectedSignals
+    }
 
   };
 
 }
 
 
-/* =========================================================
-   DAILY / ASIA CONTEXT
-========================================================= */
+/* ============================================================
+   GROUP RAID SCORE
+============================================================ */
 
-function buildDailyContext(
-  bars
-) {
+function groupByRaidScore(trades) {
 
-  const days =
-    new Map();
+  const buckets = [
+
+    {
+      min: 0,
+      max: 69.999,
+      name: "<70"
+    },
+
+    {
+      min: 70,
+      max: 74.999,
+      name: "70-74"
+    },
+
+    {
+      min: 75,
+      max: 79.999,
+      name: "75-79"
+    },
+
+    {
+      min: 80,
+      max: 84.999,
+      name: "80-84"
+    },
+
+    {
+      min: 85,
+      max: 89.999,
+      name: "85-89"
+    },
+
+    {
+      min: 90,
+      max: 94.999,
+      name: "90-94"
+    },
+
+    {
+      min: 95,
+      max: 100.001,
+      name: "95-100"
+    }
+
+  ];
 
 
-  for (
-    const bar of bars
-  ) {
+  return buckets.map(bucket => {
 
-    const key =
-      utcDateKey(
-        bar.ts
+    const rows =
+      trades.filter(
+
+        trade =>
+
+          trade.raidStrength >=
+          bucket.min
+
+          &&
+
+          trade.raidStrength <=
+          bucket.max
+
       );
 
 
+    return createGroupStats(
+      bucket.name,
+      rows
+    );
+
+  });
+
+}
+
+
+/* ============================================================
+   GROUP LIQUIDITY TYPE
+============================================================ */
+
+function groupByLiquidityType(trades) {
+
+  const map =
+    new Map();
+
+
+  for (const trade of trades) {
+
     if (
-      !days.has(
-        key
+      !map.has(
+        trade.liquidityType
       )
     ) {
 
-      days.set(
+      map.set(
+        trade.liquidityType,
+        []
+      );
+
+    }
+
+
+    map
+      .get(
+        trade.liquidityType
+      )
+      .push(
+        trade
+      );
+
+  }
+
+
+  return [...map.entries()]
+
+    .map(
+      ([name, rows]) =>
+        createGroupStats(
+          name,
+          rows
+        )
+    )
+
+    .sort(
+      (a, b) =>
+        b.trades - a.trades
+    );
+
+}
+
+
+/* ============================================================
+   GROUP SIDE
+============================================================ */
+
+function groupBySide(trades) {
+
+  return [
+
+    createGroupStats(
+
+      "BUY",
+
+      trades.filter(
+        x =>
+          x.side === "BUY"
+      )
+
+    ),
+
+    createGroupStats(
+
+      "SELL",
+
+      trades.filter(
+        x =>
+          x.side === "SELL"
+      )
+
+    )
+
+  ];
+
+}
+
+
+/* ============================================================
+   GROUP SESSION
+============================================================ */
+
+function groupBySession(trades) {
+
+  const sessions = [
+    "ASIA",
+    "LONDON",
+    "NEW_YORK",
+    "OTHER"
+  ];
+
+
+  return sessions.map(name =>
+
+    createGroupStats(
+
+      name,
+
+      trades.filter(
+        x =>
+          x.session === name
+      )
+
+    )
+
+  );
+
+}
+
+
+/* ============================================================
+   GROUP STATS
+============================================================ */
+
+function createGroupStats(
+  name,
+  rows
+) {
+
+  const wins =
+    rows.filter(
+      x =>
+        x.pnlR > 0
+    );
+
+
+  const losses =
+    rows.filter(
+      x =>
+        x.pnlR < 0
+    );
+
+
+  const totalR =
+    sum(
+      rows.map(
+        x => x.pnlR
+      )
+    );
+
+
+  const grossProfit =
+    sum(
+      wins.map(
+        x => x.pnlR
+      )
+    );
+
+
+  const grossLoss =
+    Math.abs(
+
+      sum(
+        losses.map(
+          x => x.pnlR
+        )
+      )
+
+    );
+
+
+  return {
+
+    name,
+
+    trades:
+      rows.length,
+
+    wins:
+      wins.length,
+
+    losses:
+      losses.length,
+
+    winRate:
+
+      rows.length
+
+        ?
+
+        round(
+          wins.length /
+          rows.length *
+          100,
+          1
+        )
+
+        :
+
+        0,
+
+    totalR:
+      round(
+        totalR,
+        2
+      ),
+
+    expectancyR:
+
+      rows.length
+
+        ?
+
+        round(
+          totalR /
+          rows.length,
+          3
+        )
+
+        :
+
+        0,
+
+    profitFactor:
+
+      grossLoss > 0
+
+        ?
+
+        round(
+          grossProfit /
+          grossLoss,
+          2
+        )
+
+        :
+
+        grossProfit > 0
+
+          ? 999
+
+          : 0
+
+  };
+
+}
+
+
+/* ============================================================
+   SESSION LEVELS
+============================================================ */
+
+function buildSessionLevels(
+  bars,
+  now
+) {
+
+  const sessions = [
+
+    buildSingleSession(
+      bars,
+      now,
+      "ASIA"
+    ),
+
+    buildSingleSession(
+      bars,
+      now,
+      "LONDON"
+    ),
+
+    buildSingleSession(
+      bars,
+      now,
+      "NEW_YORK"
+    )
+
+  ];
+
+
+  return sessions.filter(Boolean);
+
+}
+
+
+function buildSingleSession(
+  bars,
+  now,
+  name
+) {
+
+  const nowDate =
+    now.toISOString()
+      .slice(
+        0,
+        10
+      );
+
+
+  let selected = [];
+
+
+  /*
+     Approximate UTC session windows.
+
+     Asia    00:00-09:00 UTC
+     London  07:00-16:00 UTC
+     NewYork 13:00-22:00 UTC
+
+     We use these for historical reproducibility.
+  */
+
+  let startHour;
+  let endHour;
+
+
+  if (name === "ASIA") {
+
+    startHour = 0;
+    endHour = 9;
+
+  }
+
+  else if (name === "LONDON") {
+
+    startHour = 7;
+    endHour = 16;
+
+  }
+
+  else {
+
+    startHour = 13;
+    endHour = 22;
+
+  }
+
+
+  for (
+    let dayOffset = 0;
+    dayOffset <= 3;
+    dayOffset++
+  ) {
+
+    const date =
+      new Date(
+        now.getTime() -
+        dayOffset *
+        86400000
+      );
+
+
+    const key =
+      date.toISOString()
+        .slice(
+          0,
+          10
+        );
+
+
+    selected =
+      bars.filter(bar => {
+
+        const barDate =
+          bar.time
+            .toISOString()
+            .slice(
+              0,
+              10
+            );
+
+
+        const hour =
+          bar.time
+            .getUTCHours();
+
+
+        return (
+
+          barDate === key
+
+          &&
+
+          hour >=
+          startHour
+
+          &&
+
+          hour <
+          endHour
+
+        );
+
+      });
+
+
+    if (selected.length >= 3) {
+
+      break;
+
+    }
+
+  }
+
+
+  if (!selected.length) {
+
+    return null;
+
+  }
+
+
+  const high =
+    Math.max(
+      ...selected.map(
+        x => x.high
+      )
+    );
+
+
+  const low =
+    Math.min(
+      ...selected.map(
+        x => x.low
+      )
+    );
+
+
+  return {
+
+    id:
+      name.toLowerCase(),
+
+    short:
+      name,
+
+    range: {
+
+      high:
+        round(
+          high,
+          3
+        ),
+
+      low:
+        round(
+          low,
+          3
+        )
+
+    }
+
+  };
+
+}
+
+
+/* ============================================================
+   REFERENCE LEVELS HISTORICAL
+============================================================ */
+
+function buildReferenceLevelsHistorical(
+  h1,
+  now
+) {
+
+  const today =
+    now.toISOString()
+      .slice(
+        0,
+        10
+      );
+
+
+  const dayGroups =
+    new Map();
+
+
+  for (const bar of h1) {
+
+    const key =
+      bar.time
+        .toISOString()
+        .slice(
+          0,
+          10
+        );
+
+
+    if (key >= today) {
+
+      continue;
+
+    }
+
+
+    if (!dayGroups.has(key)) {
+
+      dayGroups.set(
         key,
         []
       );
@@ -3999,162 +3525,163 @@ function buildDailyContext(
     }
 
 
-    days
-      .get(
-        key
-      )
-      .push(
-        bar
-      );
+    dayGroups
+      .get(key)
+      .push(bar);
 
   }
 
 
-  const keys =
-    Array
-      .from(
-        days.keys()
-      )
+  const completedDays =
+    [...dayGroups.keys()]
       .sort();
 
 
-  const previousDay =
-    new Map();
+  const previousDayKey =
+    completedDays.at(-1);
 
 
-  const asia =
-    new Map();
+  let previousDay =
+    null;
 
 
-  for (
-
-    let i = 0;
-
-    i <
-    keys.length;
-
-    i++
-
-  ) {
-
-    const key =
-      keys[i];
-
+  if (previousDayKey) {
 
     const rows =
-      days.get(
-        key
+      dayGroups.get(
+        previousDayKey
       );
 
 
-    /* ===================================================
-       PREVIOUS TRADING DAY
-    =================================================== */
+    previousDay = {
 
-    if (
-      i > 0
-    ) {
+      date:
+        previousDayKey,
 
-      const previousRows =
-        days.get(
-          keys[
-            i - 1
-          ]
-        );
+      high:
+        round(
 
-
-      previousDay.set(
-        key,
-        {
-
-          high:
-            Math.max(
-
-              ...previousRows.map(
-                x =>
-                  x.high
-              )
-
-            ),
-
-          low:
-            Math.min(
-
-              ...previousRows.map(
-                x =>
-                  x.low
-              )
-
+          Math.max(
+            ...rows.map(
+              x => x.high
             )
+          ),
 
-        }
+          3
+
+        ),
+
+      low:
+        round(
+
+          Math.min(
+            ...rows.map(
+              x => x.low
+            )
+          ),
+
+          3
+
+        )
+
+    };
+
+  }
+
+
+  const weekGroups =
+    new Map();
+
+
+  const currentWeek =
+    weekKey(now);
+
+
+  for (const bar of h1) {
+
+    const key =
+      weekKey(
+        bar.time
+      );
+
+
+    if (key >= currentWeek) {
+
+      continue;
+
+    }
+
+
+    if (!weekGroups.has(key)) {
+
+      weekGroups.set(
+        key,
+        []
       );
 
     }
 
 
-    /* ===================================================
-       ASIA RANGE
-       Tokyo 09:00-18:00 = UTC 00:00-09:00
-    =================================================== */
+    weekGroups
+      .get(key)
+      .push(bar);
 
-    const asiaRows =
-      rows.filter(
-        row => {
-
-          const hour =
-            new Date(
-              row.ts
-            )
-              .getUTCHours();
+  }
 
 
-          return (
+  const completedWeeks =
+    [...weekGroups.keys()]
+      .sort();
 
-            hour >= 0
 
-            &&
+  const previousWeekKey =
+    completedWeeks.at(-1);
 
-            hour < 9
 
-          );
+  let previousWeek =
+    null;
 
-        }
+
+  if (previousWeekKey) {
+
+    const rows =
+      weekGroups.get(
+        previousWeekKey
       );
 
 
-    if (
-      asiaRows.length >= 30
-    ) {
+    previousWeek = {
 
-      asia.set(
-        key,
-        {
+      week:
+        previousWeekKey,
 
-          high:
-            Math.max(
+      high:
+        round(
 
-              ...asiaRows.map(
-                x =>
-                  x.high
-              )
-
-            ),
-
-          low:
-            Math.min(
-
-              ...asiaRows.map(
-                x =>
-                  x.low
-              )
-
+          Math.max(
+            ...rows.map(
+              x => x.high
             )
+          ),
 
-        }
-      );
+          3
 
-    }
+        ),
+
+      low:
+        round(
+
+          Math.min(
+            ...rows.map(
+              x => x.low
+            )
+          ),
+
+          3
+
+        )
+
+    };
 
   }
 
@@ -4162,820 +3689,806 @@ function buildDailyContext(
   return {
 
     previousDay,
-
-    asia
+    previousWeek
 
   };
 
 }
 
 
-function getStaticLevels({
-
-  bar,
-
-  context,
-
-  used
-
-}) {
-
-  const key =
-    utcDateKey(
-      bar.ts
-    );
-
-
-  const out =
-    [];
-
-
-  const previous =
-    context.previousDay
-      .get(
-        key
-      );
-
-
-  if (
-    previous
-  ) {
-
-    pushStaticLevel({
-
-      out,
-
-      used,
-
-      staticKey:
-        `${key}-PDH`,
-
-      name:
-        "Previous Day High",
-
-      type:
-        "PDH",
-
-      side:
-        "HIGH",
-
-      price:
-        previous.high,
-
-      importance:
-        1.35
-
-    });
-
-
-    pushStaticLevel({
-
-      out,
-
-      used,
-
-      staticKey:
-        `${key}-PDL`,
-
-      name:
-        "Previous Day Low",
-
-      type:
-        "PDL",
-
-      side:
-        "LOW",
-
-      price:
-        previous.low,
-
-      importance:
-        1.35
-
-    });
-
-  }
-
-
-  /*
-    Asia levels only become usable after
-    the Asia calculation window has completed.
-  */
-
-  const hour =
-    new Date(
-      bar.ts
-    )
-      .getUTCHours();
-
-
-  if (
-    hour >= 9
-  ) {
-
-    const asia =
-      context.asia
-        .get(
-          key
-        );
-
-
-    if (
-      asia
-    ) {
-
-      pushStaticLevel({
-
-        out,
-
-        used,
-
-        staticKey:
-          `${key}-ASIA-H`,
-
-        name:
-          "Asia High",
-
-        type:
-          "ASIA_HIGH",
-
-        side:
-          "HIGH",
-
-        price:
-          asia.high,
-
-        importance:
-          1.3
-
-      });
-
-
-      pushStaticLevel({
-
-        out,
-
-        used,
-
-        staticKey:
-          `${key}-ASIA-L`,
-
-        name:
-          "Asia Low",
-
-        type:
-          "ASIA_LOW",
-
-        side:
-          "LOW",
-
-        price:
-          asia.low,
-
-        importance:
-          1.3
-
-      });
-
-    }
-
-  }
-
-
-  return out;
-
-}
-
-
-function pushStaticLevel({
-
-  out,
-
-  used,
-
-  staticKey,
-
-  name,
-
-  type,
-
-  side,
+/* ============================================================
+   BUILD LIQUIDITY POOLS
+============================================================ */
+
+function buildLiquidityPools({
 
   price,
 
-  importance
+  sessions,
+
+  reference,
+
+  equalLevels,
+
+  h1Swings,
+
+  atrH1
 
 }) {
 
-  if (
-    used.has(
-      staticKey
-    )
-  ) {
-
-    return;
-
-  }
+  const pools = [];
 
 
-  if (
-    !Number.isFinite(
-      price
-    )
-  ) {
-
-    return;
-
-  }
-
-
-  out.push({
-
-    staticKey,
-
+  function add(
     name,
-
-    type,
-
+    level,
     side,
-
-    price,
-
+    type,
     importance
+  ) {
 
-  });
+    if (
+      !Number.isFinite(
+        Number(level)
+      )
+    ) {
+
+      return;
+
+    }
+
+
+    pools.push({
+
+      name,
+
+      level:
+        Number(level),
+
+      side,
+
+      type,
+
+      importance,
+
+      aliases: []
+
+    });
+
+  }
+
+
+  for (const session of sessions) {
+
+    if (!session?.range) {
+      continue;
+    }
+
+
+    const importance =
+
+      session.short === "ASIA"
+
+        ? 1.40
+
+        : 1.28;
+
+
+    add(
+
+      `${session.short} High`,
+
+      session.range.high,
+
+      "HIGH",
+
+      `${session.short}_HIGH`,
+
+      importance
+
+    );
+
+
+    add(
+
+      `${session.short} Low`,
+
+      session.range.low,
+
+      "LOW",
+
+      `${session.short}_LOW`,
+
+      importance
+
+    );
+
+  }
+
+
+  if (reference.previousDay) {
+
+    add(
+
+      "Previous Day High",
+
+      reference.previousDay.high,
+
+      "HIGH",
+
+      "PDH",
+
+      1.55
+
+    );
+
+
+    add(
+
+      "Previous Day Low",
+
+      reference.previousDay.low,
+
+      "LOW",
+
+      "PDL",
+
+      1.55
+
+    );
+
+  }
+
+
+  if (reference.previousWeek) {
+
+    add(
+
+      "Previous Week High",
+
+      reference.previousWeek.high,
+
+      "HIGH",
+
+      "PWH",
+
+      1.65
+
+    );
+
+
+    add(
+
+      "Previous Week Low",
+
+      reference.previousWeek.low,
+
+      "LOW",
+
+      "PWL",
+
+      1.65
+
+    );
+
+  }
+
+
+  for (
+    const eq of
+    equalLevels.highs
+  ) {
+
+    add(
+
+      `Equal Highs ${eq.touches}x`,
+
+      eq.price,
+
+      "HIGH",
+
+      "EQH",
+
+      1.45
+
+    );
+
+  }
+
+
+  for (
+    const eq of
+    equalLevels.lows
+  ) {
+
+    add(
+
+      `Equal Lows ${eq.touches}x`,
+
+      eq.price,
+
+      "LOW",
+
+      "EQL",
+
+      1.45
+
+    );
+
+  }
+
+
+  for (
+    const swing of
+    h1Swings.highs
+      .slice(-4)
+  ) {
+
+    add(
+
+      "H1 Swing High",
+
+      swing.price,
+
+      "HIGH",
+
+      "H1_HIGH",
+
+      1.10
+
+    );
+
+  }
+
+
+  for (
+    const swing of
+    h1Swings.lows
+      .slice(-4)
+  ) {
+
+    add(
+
+      "H1 Swing Low",
+
+      swing.price,
+
+      "LOW",
+
+      "H1_LOW",
+
+      1.10
+
+    );
+
+  }
+
+
+  const maxDistance =
+
+    (
+      atrH1 ||
+      10
+    )
+
+    *
+    7;
+
+
+  const filtered =
+    pools.filter(
+
+      pool =>
+
+        Math.abs(
+          pool.level -
+          price
+        )
+
+        <=
+
+        maxDistance
+
+    );
+
+
+  return mergeNearbyPools(
+
+    filtered,
+
+    Math.max(
+
+      (
+        atrH1 ||
+        1
+      )
+
+      *
+      0.035,
+
+      0.08
+
+    )
+
+  );
 
 }
 
 
-/* =========================================================
-   SESSION CONTEXT
-========================================================= */
+/* ============================================================
+   MERGE POOLS
+============================================================ */
 
-function sessionContext(
-  timestamp
+function mergeNearbyPools(
+  pools,
+  tolerance
 ) {
 
-  const date =
-    new Date(
-      timestamp
+  const result = [];
+
+
+  const ordered =
+    [...pools]
+      .sort(
+        (a, b) =>
+          a.level - b.level
+      );
+
+
+  for (const pool of ordered) {
+
+    const existing =
+      result.find(
+
+        item =>
+
+          item.side ===
+          pool.side
+
+          &&
+
+          Math.abs(
+            item.level -
+            pool.level
+          )
+
+          <=
+
+          tolerance
+
+      );
+
+
+    if (!existing) {
+
+      result.push({
+        ...pool
+      });
+
+      continue;
+
+    }
+
+
+    const oldImportance =
+      existing.importance;
+
+
+    existing.aliases.push(
+      pool.name
     );
 
 
-  const london =
-    localParts(
+    existing.level =
 
-      date,
+      (
+        existing.level +
+        pool.level
+      )
 
-      "Europe/London"
+      /
+      2;
 
+
+    if (
+      pool.importance >
+      oldImportance
+    ) {
+
+      existing.name =
+        pool.name;
+
+      existing.type =
+        pool.type;
+
+    }
+
+
+    existing.importance =
+      Math.max(
+        oldImportance,
+        pool.importance
+      );
+
+  }
+
+
+  return result;
+
+}
+
+
+/* ============================================================
+   EQUAL LIQUIDITY
+============================================================ */
+
+function detectEqualLiquidity(
+  bars,
+  atr
+) {
+
+  const swings =
+    pivots(
+      bars,
+      2,
+      240
     );
 
 
-  const newYork =
-    localParts(
+  const tolerance =
+    Math.max(
 
-      date,
+      (
+        atr ||
+        1
+      )
 
-      "America/New_York"
+      *
+      0.12,
+
+      0.10
 
     );
-
-
-  const londonMinute =
-
-    london.hour *
-    60
-
-    +
-
-    london.minute;
-
-
-  const nyMinute =
-
-    newYork.hour *
-    60
-
-    +
-
-    newYork.minute;
-
-
-  const londonActive =
-
-    london.weekday >= 1
-
-    &&
-
-    london.weekday <= 5
-
-    &&
-
-    londonMinute >=
-    8 *
-    60
-
-    &&
-
-    londonMinute <
-    17 *
-    60;
-
-
-  const nyActive =
-
-    newYork.weekday >= 1
-
-    &&
-
-    newYork.weekday <= 5
-
-    &&
-
-    nyMinute >=
-    8 *
-    60
-
-    &&
-
-    nyMinute <
-    17 *
-    60;
-
-
-  const londonOpening =
-
-    londonActive
-
-    &&
-
-    londonMinute <
-
-    9 *
-    60 +
-    30;
-
-
-  const nyOpening =
-
-    nyActive
-
-    &&
-
-    nyMinute <
-
-    9 *
-    60 +
-    30;
-
-
-  if (
-    londonOpening
-  ) {
-
-    return {
-
-      name:
-        "London",
-
-      majorOpeningWindow:
-        true,
-
-      majorActive:
-        true
-
-    };
-
-  }
-
-
-  if (
-    nyOpening
-  ) {
-
-    return {
-
-      name:
-        "New York",
-
-      majorOpeningWindow:
-        true,
-
-      majorActive:
-        true
-
-    };
-
-  }
-
-
-  if (
-    londonActive
-  ) {
-
-    return {
-
-      name:
-        "London",
-
-      majorOpeningWindow:
-        false,
-
-      majorActive:
-        true
-
-    };
-
-  }
-
-
-  if (
-    nyActive
-  ) {
-
-    return {
-
-      name:
-        "New York",
-
-      majorOpeningWindow:
-        false,
-
-      majorActive:
-        true
-
-    };
-
-  }
 
 
   return {
 
-    name:
-      "Other",
+    highs:
+      clusterLiquidity(
+        swings.highs,
+        tolerance
+      ),
 
-    majorOpeningWindow:
-      false,
-
-    majorActive:
-      false
+    lows:
+      clusterLiquidity(
+        swings.lows,
+        tolerance
+      )
 
   };
 
 }
 
 
-/* =========================================================
-   TIMEFRAME STATE
-========================================================= */
-
-function buildStateSeries(
-  bars
+function clusterLiquidity(
+  swings,
+  tolerance
 ) {
 
-  const closes =
-    bars.map(
-      bar =>
-        bar.close
-    );
+  const groups = [];
 
 
-  const e20 =
-    ema(
-      closes,
-      20
-    );
+  for (const swing of swings) {
 
+    const found =
+      groups.find(
 
-  const e50 =
-    ema(
-      closes,
-      50
-    );
+        group =>
 
-
-  const e200 =
-    ema(
-      closes,
-      200
-    );
-
-
-  const r =
-    rsi(
-      closes,
-      14
-    );
-
-
-  return bars.map(
-    (
-      bar,
-      i
-    ) => {
-
-      let score =
-        0;
-
-
-      if (
-        bar.close >
-        e20[i]
-      ) {
-
-        score++;
-
-      }
-
-      else {
-
-        score--;
-
-      }
-
-
-      if (
-        e20[i] >
-        e50[i]
-      ) {
-
-        score++;
-
-      }
-
-      else {
-
-        score--;
-
-      }
-
-
-      if (
-        e50[i] >
-        e200[i]
-      ) {
-
-        score++;
-
-      }
-
-      else {
-
-        score--;
-
-      }
-
-
-      if (
-        r[i] >
-        55
-      ) {
-
-        score +=
-          0.5;
-
-      }
-
-
-      if (
-        r[i] <
-        45
-      ) {
-
-        score -=
-          0.5;
-
-      }
-
-
-      let bias =
-        "NEUTRAL";
-
-
-      if (
-        score >=
-        1.5
-      ) {
-
-        bias =
-          "BULLISH";
-
-      }
-
-
-      if (
-        score <=
-        -1.5
-      ) {
-
-        bias =
-          "BEARISH";
-
-      }
-
-
-      return {
-
-        bias,
-
-        score:
-          round(
-            score,
-            2
-          ),
-
-        rsi:
-          round(
-            r[i],
-            1
+          Math.abs(
+            group.price -
+            swing.price
           )
 
-      };
+          <=
 
-    }
-  );
-
-}
-
-
-function stateSupports(
-  state,
-  direction
-) {
-
-  if (
-    !state
-  ) {
-
-    return false;
-
-  }
-
-
-  if (
-    direction ===
-    "SELL"
-  ) {
-
-    return (
-
-      state.bias ===
-      "BEARISH"
-
-      ||
-
-      state.score <
-      0
-
-    );
-
-  }
-
-
-  return (
-
-    state.bias ===
-    "BULLISH"
-
-    ||
-
-    state.score >
-    0
-
-  );
-
-}
-
-
-/* =========================================================
-   COMPLETED HTF STATE
-========================================================= */
-
-function completedStateAt(
-
-  tfBars,
-
-  states,
-
-  timestamp,
-
-  minutes
-
-) {
-
-  const duration =
-    minutes *
-    60_000;
-
-
-  let low =
-    0;
-
-
-  let high =
-    tfBars.length -
-    1;
-
-
-  let answer =
-    -1;
-
-
-  while (
-    low <= high
-  ) {
-
-    const middle =
-      Math.floor(
-
-        (
-          low +
-          high
-        )
-
-        /
-        2
+          tolerance
 
       );
 
 
-    const completedAt =
+    if (!found) {
 
-      tfBars[
-        middle
-      ].ts
+      groups.push({
 
-      +
+        price:
+          swing.price,
 
-      duration;
+        touches:
+          1
 
+      });
 
-    if (
-      completedAt <=
-      timestamp
-    ) {
-
-      answer =
-        middle;
-
-
-      low =
-        middle +
-        1;
+      continue;
 
     }
 
-    else {
 
-      high =
-        middle -
-        1;
+    found.price =
 
-    }
+      (
+        found.price *
+        found.touches
+
+        +
+
+        swing.price
+      )
+
+      /
+
+      (
+        found.touches +
+        1
+      );
+
+
+    found.touches++;
 
   }
 
 
-  return (
+  return groups
 
-    answer >= 0
+    .filter(
+      x =>
+        x.touches >= 2
+    )
 
-      ?
+    .sort(
+      (a, b) =>
+        b.touches -
+        a.touches
+    )
 
-      states[
-        answer
-      ]
+    .slice(
+      0,
+      6
+    )
 
-      :
+    .map(
+      x => ({
 
-      null
+        price:
+          round(
+            x.price,
+            3
+          ),
 
-  );
+        touches:
+          x.touches
+
+      })
+    );
 
 }
 
 
-/* =========================================================
-   DELTA PROXY
-========================================================= */
+/* ============================================================
+   MARKET REGIME
+============================================================ */
 
-function buildDeltaSeries(
-  bars
-) {
+function buildMarketRegime({
 
-  return bars.map(
-    bar => {
+  structure,
+
+  m5,
+
+  atr5,
+
+  flow
+
+}) {
+
+  const biasList = [
+
+    structure.m5.bias,
+
+    structure.m15.bias,
+
+    structure.h1.bias,
+
+    structure.h4.bias
+
+  ];
+
+
+  const bullish =
+    biasList.filter(
+      x =>
+        x === "BULLISH"
+    ).length;
+
+
+  const bearish =
+    biasList.filter(
+      x =>
+        x === "BEARISH"
+    ).length;
+
+
+  const trend =
+
+    bullish >= 3
+
+      ?
+
+      "BULLISH"
+
+      :
+
+      bearish >= 3
+
+        ?
+
+        "BEARISH"
+
+        :
+
+        "MIXED";
+
+
+  const atrHistory =
+    atrSeries(
+      m5,
+      14
+    );
+
+
+  const baseline =
+    median(
+      atrHistory
+    ) || atr5;
+
+
+  const expansion =
+
+    atr5 /
+    Math.max(
+      baseline,
+      0.000001
+    );
+
+
+  const volatility =
+
+    expansion >= 1.30
+
+      ?
+
+      "EXPANDING"
+
+      :
+
+      expansion <= 0.75
+
+        ?
+
+        "COMPRESSED"
+
+        :
+
+        "NORMAL";
+
+
+  const delta =
+    flow.m15?.deltaPct ||
+    0;
+
+
+  const orderFlow =
+
+    delta >= 18
+
+      ?
+
+      "BUY DOMINANT"
+
+      :
+
+      delta <= -18
+
+        ?
+
+        "SELL DOMINANT"
+
+        :
+
+        "BALANCED";
+
+
+  return {
+
+    trend,
+
+    volatility,
+
+    orderFlow,
+
+    atrExpansion:
+      round(
+        expansion,
+        2
+      ),
+
+    label:
+      `${trend} · ${volatility} · ${orderFlow}`
+
+  };
+
+}
+
+
+/* ============================================================
+   FLOW ENGINE
+============================================================ */
+
+function buildFlowEngine(bars) {
+
+  const recent =
+    bars.slice(-240);
+
+
+  const ranges =
+    recent.map(
+
+      bar =>
+        Math.max(
+          bar.high -
+          bar.low,
+          0.000001
+        )
+
+    );
+
+
+  const medianRange =
+    median(ranges) || 1;
+
+
+  const hasVolume =
+
+    recent.filter(
+      bar =>
+        bar.volume > 0
+    ).length
+
+    >=
+
+    recent.length *
+    0.5;
+
+
+  const rows =
+    recent.map(bar => {
 
       const range =
         Math.max(
-
           bar.high -
           bar.low,
-
-          1e-9
-
+          0.000001
         );
+
+
+      const body =
+
+        (
+          bar.close -
+          bar.open
+        )
+
+        /
+        range;
 
 
       const closeLocation =
@@ -4995,158 +4508,800 @@ function buildDeltaSeries(
         )
 
         /
-
         range;
 
 
-      const body =
+      const activity =
 
-        (
-          bar.close -
-          bar.open
-        )
+        hasVolume
 
-        /
+          ?
 
-        range;
+          Math.max(
+            bar.volume,
+            1
+          )
+
+          :
+
+          clamp(
+
+            range /
+            medianRange,
+
+            0.25,
+
+            5
+
+          )
+
+          *
+          100;
 
 
-      const delta =
+      const buyShare =
+        clamp(
 
-        (
+          0.5
+
+          +
+
           closeLocation *
-          0.58
+          0.30
 
           +
 
           body *
-          0.42
-        )
+          0.20,
 
-        *
-        100;
+          0.05,
+
+          0.95
+
+        );
 
 
-      return clamp(
+      const buy =
+        activity *
+        buyShare;
 
-        delta,
 
-        -100,
+      const sell =
+        activity -
+        buy;
 
-        100
 
-      );
+      return {
 
-    }
-  );
+        activity,
+
+        buy,
+
+        sell,
+
+        delta:
+          buy -
+          sell
+
+      };
+
+    });
+
+
+  return {
+
+    mode:
+
+      hasVolume
+
+        ?
+
+        "OHLCV directional-volume proxy"
+
+        :
+
+        "Price-activity proxy",
+
+    m5:
+      aggregateFlow(
+        rows.slice(-1)
+      ),
+
+    m15:
+      aggregateFlow(
+        rows.slice(-3)
+      ),
+
+    m30:
+      aggregateFlow(
+        rows.slice(-6)
+      ),
+
+    h1:
+      aggregateFlow(
+        rows.slice(-12)
+      )
+
+  };
 
 }
 
 
-/* =========================================================
+function aggregateFlow(rows) {
+
+  const activity =
+    sum(
+      rows.map(
+        x => x.activity
+      )
+    );
+
+
+  const delta =
+    sum(
+      rows.map(
+        x => x.delta
+      )
+    );
+
+
+  return {
+
+    activity:
+      round(
+        activity,
+        2
+      ),
+
+    delta:
+      round(
+        delta,
+        2
+      ),
+
+    deltaPct:
+
+      activity
+
+        ?
+
+        round(
+          delta /
+          activity *
+          100,
+          1
+        )
+
+        :
+
+        0
+
+  };
+
+}
+
+
+/* ============================================================
+   ACTIVITY PROFILE
+============================================================ */
+
+function buildActivityProfile(
+  bars,
+  bins = 36
+) {
+
+  const low =
+    Math.min(
+      ...bars.map(
+        x => x.low
+      )
+    );
+
+
+  const high =
+    Math.max(
+      ...bars.map(
+        x => x.high
+      )
+    );
+
+
+  const step =
+
+    (
+      high -
+      low
+    )
+
+    /
+    bins
+
+    ||
+
+    1;
+
+
+  const data =
+    Array.from(
+
+      {
+        length: bins
+      },
+
+      (_, index) => ({
+
+        price:
+
+          low
+
+          +
+
+          (
+            index +
+            0.5
+          )
+
+          *
+          step,
+
+        activity: 0
+
+      })
+
+    );
+
+
+  for (const bar of bars) {
+
+    const typical =
+
+      (
+        bar.high +
+        bar.low +
+        bar.close
+      )
+
+      /
+      3;
+
+
+    const index =
+      clamp(
+
+        Math.floor(
+
+          (
+            typical -
+            low
+          )
+
+          /
+          step
+
+        ),
+
+        0,
+
+        bins - 1
+
+      );
+
+
+    data[index].activity +=
+
+      bar.volume > 0
+
+        ? bar.volume
+
+        : 1;
+
+  }
+
+
+  const highNodes =
+    [...data]
+      .sort(
+        (a, b) =>
+          b.activity -
+          a.activity
+      );
+
+
+  return {
+
+    poc:
+      round(
+        highNodes[0]
+          ?.price,
+        3
+      ),
+
+    hvn:
+      highNodes
+        .slice(0, 3)
+        .map(
+          x =>
+            round(
+              x.price,
+              3
+            )
+        )
+
+  };
+
+}
+
+
+/* ============================================================
+   TIMEFRAME STATE
+============================================================ */
+
+function timeframeState(bars) {
+
+  if (!bars.length) {
+
+    return {
+
+      bias: "NEUTRAL",
+      score: 0
+
+    };
+
+  }
+
+
+  const closes =
+    bars.map(
+      x => x.close
+    );
+
+
+  const e20 =
+    emaSeries(
+      closes,
+      Math.min(
+        20,
+        closes.length
+      )
+    );
+
+
+  const e50 =
+    emaSeries(
+      closes,
+      Math.min(
+        50,
+        closes.length
+      )
+    );
+
+
+  const e200 =
+    emaSeries(
+      closes,
+      Math.min(
+        200,
+        closes.length
+      )
+    );
+
+
+  const rsi =
+    rsiValue(
+      closes,
+      Math.min(
+        14,
+        Math.max(
+          2,
+          closes.length - 1
+        )
+      )
+    );
+
+
+  const structure =
+    marketStructure(
+      bars
+    );
+
+
+  let score = 0;
+
+
+  score +=
+
+    closes.at(-1) >
+    lastFinite(e20)
+
+      ? 15
+
+      : -15;
+
+
+  score +=
+
+    lastFinite(e20) >
+    lastFinite(e50)
+
+      ? 20
+
+      : -20;
+
+
+  score +=
+
+    lastFinite(e50) >
+    lastFinite(e200)
+
+      ? 20
+
+      : -20;
+
+
+  if (rsi > 55) {
+    score += 12;
+  }
+
+
+  if (rsi < 45) {
+    score -= 12;
+  }
+
+
+  if (
+    structure.bias ===
+    "BULLISH"
+  ) {
+
+    score += 25;
+
+  }
+
+
+  if (
+    structure.bias ===
+    "BEARISH"
+  ) {
+
+    score -= 25;
+
+  }
+
+
+  score =
+    clamp(
+      score,
+      -100,
+      100
+    );
+
+
+  return {
+
+    bias:
+
+      score >= 25
+
+        ?
+
+        "BULLISH"
+
+        :
+
+        score <= -25
+
+          ?
+
+          "BEARISH"
+
+          :
+
+          "NEUTRAL",
+
+    score:
+      round(
+        score,
+        1
+      ),
+
+    rsi:
+      round(
+        rsi,
+        1
+      ),
+
+    structure
+
+  };
+
+}
+
+
+/* ============================================================
+   STRUCTURE
+============================================================ */
+
+function marketStructure(bars) {
+
+  const swings =
+    pivots(
+      bars,
+      3,
+      200
+    );
+
+
+  const h1 =
+    swings.highs.at(-1);
+
+  const h2 =
+    swings.highs.at(-2);
+
+  const l1 =
+    swings.lows.at(-1);
+
+  const l2 =
+    swings.lows.at(-2);
+
+
+  let bias =
+    "NEUTRAL";
+
+
+  if (
+    h1 &&
+    h2 &&
+    l1 &&
+    l2
+  ) {
+
+    if (
+
+      h1.price >
+      h2.price
+
+      &&
+
+      l1.price >
+      l2.price
+
+    ) {
+
+      bias =
+        "BULLISH";
+
+    }
+
+    else if (
+
+      h1.price <
+      h2.price
+
+      &&
+
+      l1.price <
+      l2.price
+
+    ) {
+
+      bias =
+        "BEARISH";
+
+    }
+
+  }
+
+
+  return {
+
+    bias,
+
+    swingHigh:
+      h1?.price ?? null,
+
+    swingLow:
+      l1?.price ?? null
+
+  };
+
+}
+
+
+/* ============================================================
+   PIVOTS
+============================================================ */
+
+function pivots(
+  bars,
+  radius = 3,
+  lookback = 200
+) {
+
+  const highs = [];
+  const lows = [];
+
+
+  const start =
+    Math.max(
+      radius,
+      bars.length -
+      lookback
+    );
+
+
+  for (
+    let i = start;
+    i < bars.length - radius;
+    i++
+  ) {
+
+    let highPivot = true;
+    let lowPivot = true;
+
+
+    for (
+      let j = 1;
+      j <= radius;
+      j++
+    ) {
+
+      if (
+
+        bars[i].high <=
+        bars[i - j].high
+
+        ||
+
+        bars[i].high <
+        bars[i + j].high
+
+      ) {
+
+        highPivot =
+          false;
+
+      }
+
+
+      if (
+
+        bars[i].low >=
+        bars[i - j].low
+
+        ||
+
+        bars[i].low >
+        bars[i + j].low
+
+      ) {
+
+        lowPivot =
+          false;
+
+      }
+
+    }
+
+
+    if (highPivot) {
+
+      highs.push({
+
+        price:
+          bars[i].high,
+
+        time:
+          bars[i].time
+
+      });
+
+    }
+
+
+    if (lowPivot) {
+
+      lows.push({
+
+        price:
+          bars[i].low,
+
+        time:
+          bars[i].time
+
+      });
+
+    }
+
+  }
+
+
+  return {
+    highs,
+    lows
+  };
+
+}
+
+
+/* ============================================================
    RESAMPLE
-========================================================= */
+============================================================ */
 
 function resample(
   bars,
   minutes
 ) {
 
-  const size =
+  const period =
     minutes *
     60_000;
 
 
-  const out =
-    [];
+  const map =
+    new Map();
 
 
-  let current =
-    null;
-
-
-  for (
-    const bar of bars
-  ) {
+  for (const bar of bars) {
 
     const bucket =
 
       Math.floor(
 
-        bar.ts /
-        size
+        bar.time.getTime() /
+        period
 
       )
 
       *
-      size;
+      period;
 
 
-    if (
-      !current
+    if (!map.has(bucket)) {
 
-      ||
+      map.set(
+        bucket,
+        {
 
-      current.ts !==
-      bucket
-    ) {
+          time:
+            new Date(bucket),
 
-      if (
-        current
-      ) {
+          open:
+            bar.open,
 
-        out.push(
-          current
-        );
+          high:
+            bar.high,
 
-      }
+          low:
+            bar.low,
 
+          close:
+            bar.close,
 
-      current = {
+          volume:
+            bar.volume
 
-        ts:
-          bucket,
-
-        open:
-          bar.open,
-
-        high:
-          bar.high,
-
-        low:
-          bar.low,
-
-        close:
-          bar.close,
-
-        volume:
-          bar.volume
-          ||
-          0
-
-      };
+        }
+      );
 
     }
 
     else {
 
+      const current =
+        map.get(bucket);
+
+
       current.high =
         Math.max(
-
           current.high,
-
           bar.high
-
         );
 
 
       current.low =
         Math.min(
-
           current.low,
-
           bar.low
-
         );
 
 
@@ -5155,21 +5310,137 @@ function resample(
 
 
       current.volume +=
-        bar.volume
-        ||
-        0;
+        bar.volume;
 
     }
 
   }
 
 
-  if (
-    current
+  return [...map.values()]
+    .sort(
+      (a, b) =>
+        a.time - b.time
+    );
+
+}
+
+
+/* ============================================================
+   ATR
+============================================================ */
+
+function atrSeries(
+  bars,
+  period = 14
+) {
+
+  const tr = [];
+
+
+  for (
+    let i = 0;
+    i < bars.length;
+    i++
+  ) {
+
+    if (i === 0) {
+
+      tr.push(
+        bars[i].high -
+        bars[i].low
+      );
+
+      continue;
+
+    }
+
+
+    tr.push(
+
+      Math.max(
+
+        bars[i].high -
+        bars[i].low,
+
+        Math.abs(
+          bars[i].high -
+          bars[i - 1].close
+        ),
+
+        Math.abs(
+          bars[i].low -
+          bars[i - 1].close
+        )
+
+      )
+
+    );
+
+  }
+
+
+  return emaSeries(
+    tr,
+    period
+  );
+
+}
+
+
+/* ============================================================
+   EMA
+============================================================ */
+
+function emaSeries(
+  values,
+  period
+) {
+
+  if (!values.length) {
+    return [];
+  }
+
+
+  const p =
+    Math.max(
+      1,
+      period
+    );
+
+
+  const alpha =
+    2 /
+    (
+      p +
+      1
+    );
+
+
+  const out = [
+    values[0]
+  ];
+
+
+  for (
+    let i = 1;
+    i < values.length;
+    i++
   ) {
 
     out.push(
-      current
+
+      values[i] *
+      alpha
+
+      +
+
+      out[i - 1] *
+      (
+        1 -
+        alpha
+      )
+
     );
 
   }
@@ -5180,276 +5451,81 @@ function resample(
 }
 
 
-/* =========================================================
-   PIVOTS
-========================================================= */
-
-function isPivotHigh(
-
-  bars,
-
-  index,
-
-  left,
-
-  right
-
-) {
-
-  const value =
-    bars[
-      index
-    ].high;
-
-
-  for (
-
-    let i =
-      index -
-      left;
-
-    i <=
-      index +
-      right;
-
-    i++
-
-  ) {
-
-    if (
-      i === index
-    ) {
-
-      continue;
-
-    }
-
-
-    if (
-      bars[i].high >=
-      value
-    ) {
-
-      return false;
-
-    }
-
-  }
-
-
-  return true;
-
-}
-
-
-function isPivotLow(
-
-  bars,
-
-  index,
-
-  left,
-
-  right
-
-) {
-
-  const value =
-    bars[
-      index
-    ].low;
-
-
-  for (
-
-    let i =
-      index -
-      left;
-
-    i <=
-      index +
-      right;
-
-    i++
-
-  ) {
-
-    if (
-      i === index
-    ) {
-
-      continue;
-
-    }
-
-
-    if (
-      bars[i].low <=
-      value
-    ) {
-
-      return false;
-
-    }
-
-  }
-
-
-  return true;
-
-}
-
-
-function pruneLevels(
-  levels,
-  currentIndex
-) {
-
-  while (
-    levels.length
-
-    &&
-
-    currentIndex
-
-    -
-
-    levels[0].pivotIndex
-
-    >
-
-    LEVEL_MAX_AGE
-  ) {
-
-    levels.shift();
-
-  }
-
-}
-
-
-/* =========================================================
-   ATR
-========================================================= */
-
-function atr(
-  bars,
+/* ============================================================
+   RSI
+============================================================ */
+
+function rsiValue(
+  values,
   period = 14
 ) {
 
-  const tr =
-    bars.map(
-      (
-        bar,
-        i
-      ) => {
-
-        if (
-          i === 0
-        ) {
-
-          return (
-            bar.high -
-            bar.low
-          );
-
-        }
-
-
-        const previousClose =
-          bars[
-            i - 1
-          ].close;
-
-
-        return Math.max(
-
-          bar.high -
-          bar.low,
-
-          Math.abs(
-            bar.high -
-            previousClose
-          ),
-
-          Math.abs(
-            bar.low -
-            previousClose
-          )
-
-        );
-
-      }
-    );
-
-
-  const out =
-    new Array(
-      bars.length
-    )
-      .fill(
-        null
-      );
-
-
   if (
-    bars.length <
+    values.length <=
     period
   ) {
 
-    return out;
+    return 50;
 
   }
 
 
-  let total =
-    0;
+  let gain = 0;
+  let loss = 0;
 
 
   for (
-
-    let i = 0;
-
-    i <
-    period;
-
+    let i = 1;
+    i <= period;
     i++
-
   ) {
 
-    total +=
-      tr[i];
+    const change =
+      values[i] -
+      values[i - 1];
+
+
+    gain +=
+      Math.max(
+        change,
+        0
+      );
+
+
+    loss +=
+      Math.max(
+        -change,
+        0
+      );
 
   }
 
 
-  let previous =
-    total /
+  let avgGain =
+    gain /
     period;
 
 
-  out[
-    period - 1
-  ] =
-    previous;
+  let avgLoss =
+    loss /
+    period;
 
 
   for (
-
-    let i =
-      period;
-
-    i <
-    tr.length;
-
+    let i = period + 1;
+    i < values.length;
     i++
-
   ) {
 
-    previous =
+    const change =
+      values[i] -
+      values[i - 1];
+
+
+    avgGain =
 
       (
-        previous *
+        avgGain *
         (
           period -
           1
@@ -5457,515 +5533,412 @@ function atr(
 
         +
 
-        tr[i]
+        Math.max(
+          change,
+          0
+        )
       )
 
       /
-
       period;
 
 
-    out[i] =
-      previous;
+    avgLoss =
+
+      (
+        avgLoss *
+        (
+          period -
+          1
+        )
+
+        +
+
+        Math.max(
+          -change,
+          0
+        )
+      )
+
+      /
+      period;
 
   }
 
 
-  return out;
+  if (avgLoss === 0) {
+
+    return 100;
+
+  }
+
+
+  const rs =
+    avgGain /
+    avgLoss;
+
+
+  return (
+
+    100
+
+    -
+
+    100 /
+    (
+      1 +
+      rs
+    )
+
+  );
 
 }
 
 
-/* =========================================================
-   EMA
-========================================================= */
+/* ============================================================
+   SESSION FILTER
+============================================================ */
 
-function ema(
-  values,
-  period
+function sessionAllowed(
+  date,
+  filter
 ) {
 
-  const out =
-    new Array(
-      values.length
-    )
-      .fill(
-        null
-      );
-
-
-  if (
-    !values.length
-  ) {
-
-    return out;
-
+  if (filter === "ALL") {
+    return true;
   }
 
 
-  const k =
-    2 /
-    (
-      period +
-      1
+  const session =
+    getTradingSession(
+      date
     );
 
 
-  let previous =
-    values[0];
+  if (filter === "LONDON_NY") {
 
-
-  out[0] =
-    previous;
-
-
-  for (
-
-    let i = 1;
-
-    i <
-    values.length;
-
-    i++
-
-  ) {
-
-    previous =
-
-      values[i] *
-      k
-
-      +
-
-      previous *
-      (
-        1 -
-        k
-      );
-
-
-    out[i] =
-      previous;
+    return (
+      session === "LONDON" ||
+      session === "NEW_YORK"
+    );
 
   }
 
 
-  return out;
+  return session === filter;
 
 }
 
 
-/* =========================================================
-   RSI
-========================================================= */
+function getTradingSession(date) {
 
-function rsi(
-  values,
-  period = 14
-) {
-
-  const out =
-    new Array(
-      values.length
-    )
-      .fill(
-        50
-      );
+  const hour =
+    date.getUTCHours();
 
 
   if (
-    values.length <=
-    period
+    hour >= 0 &&
+    hour < 7
   ) {
 
-    return out;
+    return "ASIA";
 
   }
 
 
-  let gains =
-    0;
-
-
-  let losses =
-    0;
-
-
-  for (
-
-    let i = 1;
-
-    i <=
-    period;
-
-    i++
-
+  if (
+    hour >= 7 &&
+    hour < 13
   ) {
 
-    const difference =
-
-      values[i]
-
-      -
-
-      values[
-        i - 1
-      ];
-
-
-    gains +=
-      Math.max(
-        difference,
-        0
-      );
-
-
-    losses +=
-      Math.max(
-        -difference,
-        0
-      );
+    return "LONDON";
 
   }
 
 
-  let averageGain =
-    gains /
-    period;
-
-
-  let averageLoss =
-    losses /
-    period;
-
-
-  for (
-
-    let i =
-      period;
-
-    i <
-    values.length;
-
-    i++
-
+  if (
+    hour >= 13 &&
+    hour < 22
   ) {
 
-    if (
-      i >
-      period
-    ) {
-
-      const difference =
-
-        values[i]
-
-        -
-
-        values[
-          i - 1
-        ];
-
-
-      averageGain =
-
-        (
-          averageGain *
-          (
-            period -
-            1
-          )
-
-          +
-
-          Math.max(
-            difference,
-            0
-          )
-        )
-
-        /
-
-        period;
-
-
-      averageLoss =
-
-        (
-          averageLoss *
-          (
-            period -
-            1
-          )
-
-          +
-
-          Math.max(
-            -difference,
-            0
-          )
-        )
-
-        /
-
-        period;
-
-    }
-
-
-    out[i] =
-
-      averageLoss === 0
-
-        ?
-
-        100
-
-        :
-
-        100
-
-        -
-
-        100
-
-        /
-
-        (
-          1
-
-          +
-
-          averageGain /
-          averageLoss
-        );
+    return "NEW_YORK";
 
   }
 
 
-  return out;
+  return "OTHER";
 
 }
 
 
-/* =========================================================
-   ROLLING AVERAGE
-========================================================= */
+/* ============================================================
+   OUTPUT CLEANER
+============================================================ */
 
-function rollingAverage(
-  values,
-  period
-) {
-
-  const out =
-    new Array(
-      values.length
-    )
-      .fill(
-        0
-      );
-
-
-  let running =
-    0;
-
-
-  for (
-
-    let i = 0;
-
-    i <
-    values.length;
-
-    i++
-
-  ) {
-
-    running +=
-      values[i];
-
-
-    if (
-      i >= period
-    ) {
-
-      running -=
-        values[
-          i -
-          period
-        ];
-
-    }
-
-
-    const count =
-      Math.min(
-
-        i + 1,
-
-        period
-
-      );
-
-
-    out[i] =
-      running /
-      count;
-
-  }
-
-
-  return out;
-
-}
-
-
-/* =========================================================
-   LOCAL TIME PARTS
-========================================================= */
-
-function localParts(
-  date,
-  timeZone
-) {
-
-  const parts =
-    new Intl.DateTimeFormat(
-
-      "en-US",
-
-      {
-
-        timeZone,
-
-        hour:
-          "2-digit",
-
-        minute:
-          "2-digit",
-
-        weekday:
-          "short",
-
-        hourCycle:
-          "h23"
-
-      }
-
-    )
-      .formatToParts(
-        date
-      );
-
-
-  const object =
-    {};
-
-
-  for (
-    const part of parts
-  ) {
-
-    if (
-      part.type !==
-      "literal"
-    ) {
-
-      object[
-        part.type
-      ] =
-        part.value;
-
-    }
-
-  }
-
-
-  const weekdays = {
-
-    Sun: 0,
-    Mon: 1,
-    Tue: 2,
-    Wed: 3,
-    Thu: 4,
-    Fri: 5,
-    Sat: 6
-
-  };
-
+function cleanTradeForOutput(trade) {
 
   return {
 
-    hour:
-      Number(
-        object.hour
-      ),
+    id:
+      trade.id,
 
-    minute:
-      Number(
-        object.minute
-      ),
+    side:
+      trade.side,
 
-    weekday:
-      weekdays[
-        object.weekday
-      ]
+    liquidity:
+      trade.liquidity,
+
+    liquidityType:
+      trade.liquidityType,
+
+    liquidityLevel:
+      trade.liquidityLevel,
+
+    signalTime:
+      trade.signalTime,
+
+    entryTime:
+      trade.entryTime,
+
+    exitTime:
+      trade.exitTime,
+
+    session:
+      trade.session,
+
+    entry:
+      trade.entry,
+
+    stop:
+      trade.stop,
+
+    target:
+      trade.target,
+
+    exit:
+      trade.exit,
+
+    effectiveRR:
+      trade.effectiveRR,
+
+    raidStrength:
+      trade.raidStrength,
+
+    liquidityStrength:
+      trade.liquidityStrength,
+
+    combinedQuality:
+      trade.combinedQuality,
+
+    distanceAtr:
+      trade.distanceAtr,
+
+    stage:
+      trade.stage,
+
+    regime:
+      trade.regime,
+
+    mtf:
+      trade.mtf,
+
+    flowDelta:
+      trade.flowDelta,
+
+    result:
+      trade.result,
+
+    pnlR:
+      trade.pnlR,
+
+    pnlCash:
+      trade.pnlCash,
+
+    barsHeld:
+      trade.barsHeld
 
   };
 
 }
 
 
-/* =========================================================
-   UTILITIES
-========================================================= */
+/* ============================================================
+   SORT POOLS
+============================================================ */
 
-function envNumber(
-  name,
-  fallback
-) {
+function sortPools(a, b) {
 
-  const value =
-    Number(
-      process.env[
-        name
-      ]
+  if (
+    b.raidStrength !==
+    a.raidStrength
+  ) {
+
+    return (
+      b.raidStrength -
+      a.raidStrength
     );
 
+  }
 
-  return Number.isFinite(
-    value
-  )
 
-    ?
-
-    value
-
-    :
-
-    fallback;
+  return (
+    b.combinedQuality -
+    a.combinedQuality
+  );
 
 }
 
 
-function queryNumber(
-  value,
-  fallback,
-  minimum,
-  maximum
-) {
+/* ============================================================
+   WEEK KEY
+============================================================ */
 
-  const n =
-    Number(
-      value
+function weekKey(date) {
+
+  const copy =
+    new Date(
+
+      Date.UTC(
+
+        date.getUTCFullYear(),
+
+        date.getUTCMonth(),
+
+        date.getUTCDate()
+
+      )
+
     );
 
 
+  const day =
+    copy.getUTCDay() ||
+    7;
+
+
+  copy.setUTCDate(
+
+    copy.getUTCDate()
+
+    +
+    4
+
+    -
+    day
+
+  );
+
+
+  const yearStart =
+    new Date(
+
+      Date.UTC(
+
+        copy.getUTCFullYear(),
+
+        0,
+
+        1
+
+      )
+
+    );
+
+
+  const week =
+    Math.ceil(
+
+      (
+        (
+          copy -
+          yearStart
+        )
+
+        /
+        86400000
+
+        +
+        1
+      )
+
+      /
+      7
+
+    );
+
+
+  return (
+
+    `${copy.getUTCFullYear()}-W` +
+
+    `${String(week).padStart(
+      2,
+      "0"
+    )}`
+
+  );
+
+}
+
+
+/* ============================================================
+   TIME
+============================================================ */
+
+function parseTDTime(value) {
+
+  if (!value) {
+
+    return new Date(NaN);
+
+  }
+
+
   if (
-    !Number.isFinite(
-      n
-    )
+    value.includes("T")
   ) {
+
+    return new Date(
+
+      value.endsWith("Z")
+
+        ? value
+
+        : `${value}Z`
+
+    );
+
+  }
+
+
+  return new Date(
+
+    `${value.replace(
+      " ",
+      "T"
+    )}Z`
+
+  );
+
+}
+
+
+/* ============================================================
+   SETTINGS HELPERS
+============================================================ */
+
+function numberSetting(
+  value,
+  fallback,
+  min,
+  max
+) {
+
+  const number =
+    Number(value);
+
+
+  if (!Number.isFinite(number)) {
 
     return fallback;
 
@@ -5973,35 +5946,141 @@ function queryNumber(
 
 
   return clamp(
+    number,
+    min,
+    max
+  );
 
-    n,
+}
 
-    minimum,
 
-    maximum
+function intSetting(
+  value,
+  fallback,
+  min,
+  max
+) {
+
+  return Math.round(
+
+    numberSetting(
+      value,
+      fallback,
+      min,
+      max
+    )
 
   );
 
 }
 
 
-function num(
-  value
+function boolSetting(
+  value,
+  fallback
 ) {
 
-  const n =
-    Number(
-      value
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+
+    return fallback;
+
+  }
+
+
+  const text =
+    String(value)
+      .toLowerCase();
+
+
+  return (
+
+    text === "true" ||
+    text === "1" ||
+    text === "yes" ||
+    text === "on"
+
+  );
+
+}
+
+
+function enumSetting(
+  value,
+  choices,
+  fallback
+) {
+
+  const text =
+    String(
+      value ||
+      fallback
+    )
+      .toUpperCase();
+
+
+  return choices.includes(text)
+    ? text
+    : fallback;
+
+}
+
+
+/* ============================================================
+   HELPERS
+============================================================ */
+
+function sum(values) {
+
+  return values.reduce(
+
+    (total, value) =>
+
+      total
+
+      +
+
+      (
+        Number.isFinite(
+          Number(value)
+        )
+
+          ?
+
+          Number(value)
+
+          :
+
+          0
+      ),
+
+    0
+
+  );
+
+}
+
+
+function mean(values) {
+
+  const clean =
+    values.filter(
+      x =>
+        Number.isFinite(
+          Number(x)
+        )
     );
 
 
-  return Number.isFinite(
-    n
-  )
+  return clean.length
 
     ?
 
-    n
+    sum(clean) /
+    clean.length
 
     :
 
@@ -6010,43 +6089,117 @@ function num(
 }
 
 
-function round(
-  value,
-  decimals = 2
+function percentile(
+  values,
+  q
 ) {
 
-  const n =
-    Number(
-      value
-    );
+  const sorted =
+    values
+      .filter(
+        Number.isFinite
+      )
+      .slice()
+      .sort(
+        (a, b) =>
+          a - b
+      );
 
 
-  if (
-    !Number.isFinite(
-      n
-    )
-  ) {
+  if (!sorted.length) {
 
     return null;
 
   }
 
 
-  const multiplier =
-    10 **
-    decimals;
+  const position =
+
+    (
+      sorted.length -
+      1
+    )
+
+    *
+    q;
 
 
-  return Math.round(
+  const low =
+    Math.floor(
+      position
+    );
 
-    n *
-    multiplier
 
-  )
+  const high =
+    Math.ceil(
+      position
+    );
 
-  /
 
-  multiplier;
+  if (low === high) {
+
+    return sorted[low];
+
+  }
+
+
+  const weight =
+    position -
+    low;
+
+
+  return (
+
+    sorted[low] *
+    (
+      1 -
+      weight
+    )
+
+    +
+
+    sorted[high] *
+    weight
+
+  );
+
+}
+
+
+function median(values) {
+
+  return percentile(
+    values,
+    0.5
+  );
+
+}
+
+
+function lastFinite(values) {
+
+  for (
+    let i = values.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    if (
+      Number.isFinite(
+        Number(values[i])
+      )
+    ) {
+
+      return Number(
+        values[i]
+      );
+
+    }
+
+  }
+
+
+  return null;
 
 }
 
@@ -6071,92 +6224,39 @@ function clamp(
 }
 
 
-function sum(
-  values
+function round(
+  value,
+  decimals = 2
 ) {
 
-  return values.reduce(
+  if (
+    !Number.isFinite(
+      Number(value)
+    )
+  ) {
 
-    (
-      total,
-      value
-    ) =>
+    return null;
 
-      total
+  }
 
-      +
 
-      (
-        Number.isFinite(
-          value
-        )
+  const multiplier =
+    10 **
+    decimals;
 
-          ?
 
-          value
+  return (
 
-          :
+    Math.round(
 
-          0
-      ),
+      Number(value) *
+      multiplier
 
-    0
+    )
+
+    /
+    multiplier
 
   );
-
-}
-
-
-function avg(
-  values
-) {
-
-  return values.length
-
-    ?
-
-    sum(
-      values
-    )
-    /
-    values.length
-
-    :
-
-    0;
-
-}
-
-
-function utcDateKey(
-  timestamp
-) {
-
-  return new Date(
-    timestamp
-  )
-    .toISOString()
-    .slice(
-      0,
-      10
-    );
-
-}
-
-
-function tdDate(
-  date
-) {
-
-  return date
-    .toISOString()
-    .replace(
-      "T",
-      " "
-    )
-    .slice(
-      0,
-      19
-    );
 
 }
