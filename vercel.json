@@ -5,10 +5,15 @@
       "maxDuration": 60
     }
   },
-  "rewrites": [
+  "headers": [
     {
-      "source": "/api/backtest",
-      "destination": "/api/backtest.js"
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     }
   ]
 }
