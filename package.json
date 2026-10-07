@@ -1,8 +1,9 @@
 {
-  "name": "tyson-trend-pullback-v1",
-  "version": "1.0.0",
+  "name": "tyson-trend-pullback-v1-1",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
+  "description": "XAUUSD multi-timeframe trend pullback backtester with validation",
   "engines": {
     "node": ">=20"
   },
