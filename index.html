@@ -12,7 +12,7 @@
 
 <meta
   name="theme-color"
-  content="#04070c"
+  content="#030609"
 >
 
 <meta
@@ -25,7 +25,7 @@
   content="black-translucent"
 >
 
-<title>TYSON TREND PULLBACK</title>
+<title>TYSON PULLBACK V1.1</title>
 
 
 <style>
@@ -37,22 +37,26 @@
 
 :root{
 
-  --bg:#03060a;
-  --card:#0b121c;
-  --card2:#080e16;
+  --bg:#030609;
+  --panel:#0c1420;
+  --panel2:#070d14;
 
-  --border:rgba(150,180,220,.17);
+  --border:rgba(143,174,215,.18);
 
-  --text:#f5f7fb;
-  --muted:#8695aa;
+  --text:#f5f8fc;
+  --muted:#8999af;
 
-  --green:#48dc8b;
-  --red:#ff606c;
+  --green:#49df8d;
+  --red:#ff616d;
 
   --blue:#65aaff;
-  --cyan:#54dad9;
+  --cyan:#50dadd;
 
-  --yellow:#ffc965;
+  --gold:#ffcc67;
+}
+
+html{
+  scroll-behavior:smooth;
 }
 
 body{
@@ -61,6 +65,8 @@ body{
 
   min-height:100vh;
 
+  color:var(--text);
+
   font-family:
     -apple-system,
     BlinkMacSystemFont,
@@ -68,24 +74,21 @@ body{
     "Segoe UI",
     sans-serif;
 
-  color:var(--text);
-
   background:
 
     radial-gradient(
       circle at 50% -10%,
-      rgba(42,106,205,.17),
-      transparent 30%
+      rgba(48,107,196,.18),
+      transparent 31%
     ),
 
     linear-gradient(
       180deg,
-      #08111d 0%,
-      #03070b 42%,
-      #020406 100%
+      #07101b,
+      #030609 45%,
+      #020406
     );
 }
-
 
 .app{
 
@@ -98,7 +101,7 @@ body{
 
   padding:
     22px
-    16px
+    15px
     80px;
 }
 
@@ -111,59 +114,56 @@ body{
 
   display:flex;
 
+  align-items:center;
+
   justify-content:
     space-between;
 
-  align-items:center;
+  gap:15px;
 
-  gap:16px;
-
-  margin-bottom:24px;
+  margin-bottom:23px;
 }
-
 
 .logo{
 
   font-size:
     clamp(
-      24px,
+      23px,
       5vw,
       38px
     );
 
-  font-weight:900;
+  font-weight:950;
 
   letter-spacing:.12em;
 }
 
-
 .subtitle{
-
-  margin-top:5px;
 
   color:var(--muted);
 
-  font-size:14px;
+  margin-top:6px;
+
+  font-size:13px;
 }
 
-
-.badge{
+.version{
 
   padding:
-    11px 15px;
-
-  border-radius:999px;
+    11px 14px;
 
   border:
     1px solid
     var(--border);
 
+  border-radius:999px;
+
+  color:#9caac0;
+
   background:
-    rgba(3,8,14,.75);
+    rgba(2,7,12,.65);
 
-  color:#9eacc0;
-
-  font-size:11px;
+  font-size:10px;
 
   white-space:nowrap;
 }
@@ -175,29 +175,53 @@ body{
 
 .panel{
 
-  background:
+  position:relative;
 
-    linear-gradient(
-      145deg,
-      rgba(15,24,36,.96),
-      rgba(7,12,19,.96)
-    );
+  overflow:hidden;
+
+  margin-bottom:20px;
+
+  padding:21px;
+
+  border-radius:27px;
 
   border:
     1px solid
     var(--border);
 
-  border-radius:27px;
+  background:
 
-  padding:22px;
-
-  margin-bottom:20px;
+    linear-gradient(
+      145deg,
+      rgba(15,24,37,.96),
+      rgba(6,11,18,.96)
+    );
 
   box-shadow:
-    0 20px 60px
-    rgba(0,0,0,.26);
+    0 20px 65px
+    rgba(0,0,0,.27);
 }
 
+.panel::before{
+
+  content:"";
+
+  position:absolute;
+
+  left:10%;
+  right:10%;
+  top:0;
+
+  height:1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(101,170,255,.35),
+      transparent
+    );
+}
 
 .title-row{
 
@@ -213,7 +237,6 @@ body{
   margin-bottom:18px;
 }
 
-
 .title{
 
   margin:0;
@@ -225,23 +248,22 @@ body{
   letter-spacing:.14em;
 }
 
-
-.muted{
+.small{
 
   color:var(--muted);
+
+  font-size:11px;
 }
 
 
 /* =========================================================
-   LIVE STATE
+   BIAS
 ========================================================= */
 
 .bias{
 
   margin:
-    2px 0 16px;
-
-  font-weight:950;
+    3px 0 17px;
 
   font-size:
     clamp(
@@ -250,9 +272,10 @@ body{
       76px
     );
 
+  font-weight:950;
+
   letter-spacing:-.05em;
 }
-
 
 .bull{
   color:var(--green);
@@ -263,9 +286,13 @@ body{
 }
 
 .neutral{
-  color:var(--yellow);
+  color:var(--gold);
 }
 
+
+/* =========================================================
+   SCORE
+========================================================= */
 
 .score-grid{
 
@@ -276,54 +303,52 @@ body{
 
   gap:12px;
 
-  margin-bottom:16px;
+  margin-bottom:15px;
 }
 
+.score-box{
 
-.score{
+  padding:15px;
 
-  padding:16px;
-
-  border-radius:17px;
+  background:
+    rgba(3,8,14,.55);
 
   border:
     1px solid
     var(--border);
 
-  background:
-    rgba(3,8,14,.55);
+  border-radius:17px;
 }
-
 
 .score-top{
 
   display:flex;
 
+  align-items:center;
+
   justify-content:
     space-between;
 
+  color:#9eacc0;
+
+  font-size:12px;
+
   margin-bottom:11px;
-
-  color:#a5b2c5;
-
-  font-size:13px;
 }
-
 
 .bar{
 
   height:7px;
 
-  overflow:hidden;
-
   border-radius:999px;
 
   background:
     rgba(255,255,255,.055);
+
+  overflow:hidden;
 }
 
-
-.bar div{
+.bar > div{
 
   height:100%;
 
@@ -333,25 +358,23 @@ body{
     width .4s ease;
 }
 
-
 #longBar{
 
   background:
     linear-gradient(
       90deg,
-      #239b62,
-      #48dc8b
+      #258f5f,
+      #49df8d
     );
 }
-
 
 #shortBar{
 
   background:
     linear-gradient(
       90deg,
-      #b53241,
-      #ff606c
+      #ac3442,
+      #ff616d
     );
 }
 
@@ -370,24 +393,22 @@ body{
       1fr
     );
 
-  gap:12px;
+  gap:11px;
 }
-
 
 .tf{
 
-  padding:16px;
-
-  border-radius:17px;
+  padding:15px;
 
   border:
     1px solid
     var(--border);
 
-  background:
-    rgba(3,8,14,.52);
-}
+  border-radius:17px;
 
+  background:
+    rgba(3,8,14,.53);
+}
 
 .tf h3{
 
@@ -399,14 +420,12 @@ body{
   font-size:13px;
 }
 
-
 .tf-state{
 
   font-weight:850;
 
-  margin-bottom:10px;
+  margin-bottom:9px;
 }
-
 
 .line{
 
@@ -425,10 +444,8 @@ body{
   font-size:11px;
 }
 
-
 .line b{
-
-  color:#e3e9f2;
+  color:#e4eaf3;
 }
 
 
@@ -446,9 +463,8 @@ body{
       1fr
     );
 
-  gap:12px;
+  gap:11px;
 }
-
 
 .field{
 
@@ -459,18 +475,16 @@ body{
   gap:7px;
 }
 
-
 label{
 
-  font-size:11px;
+  color:#8e9db2;
 
-  color:#8f9db1;
-
-  letter-spacing:.05em;
+  font-size:10px;
 
   text-transform:uppercase;
-}
 
+  letter-spacing:.06em;
+}
 
 input,
 select{
@@ -480,26 +494,27 @@ select{
   padding:
     13px 12px;
 
-  color:#f5f7fb;
-
-  background:
-    rgba(2,7,12,.75);
+  border-radius:13px;
 
   border:
     1px solid
     var(--border);
 
-  border-radius:13px;
-
   outline:none;
+
+  color:white;
+
+  background:
+    rgba(2,7,12,.72);
 
   font-size:14px;
 }
 
-
 button{
 
   width:100%;
+
+  margin-top:17px;
 
   border:0;
 
@@ -507,26 +522,24 @@ button{
 
   padding:16px;
 
-  margin-top:17px;
+  color:#031019;
 
   font-size:14px;
 
-  font-weight:900;
-
-  color:#041019;
+  font-weight:950;
 
   background:
+
     linear-gradient(
       90deg,
-      #62aaff,
-      #53dbd8,
-      #4add8d
+      #63aaff,
+      #51dadd,
+      #49df8d
     );
 }
 
-
 button:disabled{
-  opacity:.5;
+  opacity:.45;
 }
 
 
@@ -547,8 +560,9 @@ button:disabled{
   gap:11px;
 }
 
-
 .metric{
+
+  padding:15px;
 
   border:
     1px solid
@@ -557,13 +571,10 @@ button:disabled{
   border-radius:17px;
 
   background:
-    rgba(3,8,14,.54);
-
-  padding:15px;
+    rgba(3,8,14,.53);
 }
 
-
-.metric-name{
+.metric-label{
 
   color:var(--muted);
 
@@ -574,26 +585,29 @@ button:disabled{
   letter-spacing:.06em;
 }
 
-
 .metric-value{
+
+  margin-top:7px;
 
   font-weight:900;
 
   font-size:20px;
-
-  margin-top:7px;
 }
 
 
-.grade-row{
+/* =========================================================
+   GRADE
+========================================================= */
 
-  margin-top:15px;
+.grade-row{
 
   display:flex;
 
+  align-items:center;
+
   gap:13px;
 
-  align-items:center;
+  margin-top:15px;
 
   padding:15px;
 
@@ -604,37 +618,117 @@ button:disabled{
   border-radius:17px;
 
   background:
-    rgba(0,0,0,.18);
+    rgba(0,0,0,.17);
 }
 
-
 .grade{
-
-  width:55px;
-
-  height:55px;
-
-  flex:none;
 
   display:grid;
 
   place-items:center;
+
+  width:56px;
+  height:56px;
+
+  flex:none;
 
   border-radius:15px;
 
   background:
     rgba(101,170,255,.10);
 
-  font-weight:950;
+  color:var(--blue);
 
   font-size:27px;
 
-  color:var(--blue);
+  font-weight:950;
 }
 
 
 /* =========================================================
-   CANVAS
+   VALIDATION
+========================================================= */
+
+.validation-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:13px;
+}
+
+.validation-card{
+
+  padding:17px;
+
+  border-radius:19px;
+
+  border:
+    1px solid
+    var(--border);
+
+  background:
+    rgba(3,8,14,.52);
+}
+
+.validation-title{
+
+  margin-bottom:14px;
+
+  color:var(--blue);
+
+  font-size:12px;
+
+  letter-spacing:.08em;
+
+  font-weight:850;
+}
+
+.validation-stats{
+
+  display:grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:8px;
+}
+
+.v-stat{
+
+  padding:11px;
+
+  border-radius:13px;
+
+  background:
+    rgba(0,0,0,.18);
+}
+
+.v-stat span{
+
+  display:block;
+
+  color:var(--muted);
+
+  font-size:9px;
+
+  text-transform:uppercase;
+}
+
+.v-stat b{
+
+  display:block;
+
+  margin-top:5px;
+
+  font-size:16px;
+}
+
+
+/* =========================================================
+   CHART
 ========================================================= */
 
 .chart{
@@ -645,22 +739,20 @@ button:disabled{
     1px solid
     var(--border);
 
-  background:
-    rgba(2,6,10,.55);
-
   border-radius:17px;
 
   overflow:hidden;
-}
 
+  background:
+    rgba(2,6,10,.54);
+}
 
 canvas{
 
-  display:block;
-
   width:100%;
-
   height:100%;
+
+  display:block;
 }
 
 
@@ -679,7 +771,6 @@ canvas{
   border-radius:17px;
 }
 
-
 table{
 
   width:100%;
@@ -689,37 +780,34 @@ table{
   border-collapse:collapse;
 
   background:
-    rgba(3,8,14,.45);
+    rgba(3,8,14,.44);
 }
-
 
 th,
 td{
 
-  text-align:left;
-
   padding:
     12px 13px;
 
+  text-align:left;
+
   border-bottom:
     1px solid
-    rgba(255,255,255,.055);
+    rgba(255,255,255,.05);
 
   font-size:12px;
 }
-
 
 th{
 
   color:#8f9eb3;
 
-  font-size:10px;
-
   text-transform:uppercase;
 
   letter-spacing:.06em;
-}
 
+  font-size:10px;
+}
 
 .tag{
 
@@ -735,22 +823,20 @@ th{
   font-weight:900;
 }
 
-
 .buy{
 
   color:var(--green);
 
   background:
-    rgba(72,220,139,.10);
+    rgba(73,223,141,.1);
 }
-
 
 .sell{
 
   color:var(--red);
 
   background:
-    rgba(255,96,108,.10);
+    rgba(255,97,109,.1);
 }
 
 
@@ -764,40 +850,38 @@ th{
 
   padding:13px;
 
-  border-radius:14px;
-
   border:
     1px solid
     var(--border);
 
-  color:#91a1b5;
+  border-radius:14px;
 
   background:
-    rgba(0,0,0,.18);
-}
+    rgba(0,0,0,.17);
 
+  color:#91a1b5;
+}
 
 .status.good{
 
-  color:#91efba;
+  color:#90efb9;
 
   border-color:
-    rgba(72,220,139,.3);
+    rgba(73,223,141,.30);
 
   background:
-    rgba(72,220,139,.06);
+    rgba(73,223,141,.06);
 }
-
 
 .status.bad{
 
-  color:#ff9ba4;
+  color:#ff9ca5;
 
   border-color:
-    rgba(255,96,108,.3);
+    rgba(255,97,109,.30);
 
   background:
-    rgba(255,96,108,.06);
+    rgba(255,97,109,.06);
 }
 
 
@@ -810,18 +894,27 @@ th{
 ){
 
   .settings{
+
     grid-template-columns:
       1fr 1fr;
+
   }
 
   .metrics{
+
     grid-template-columns:
-      repeat(3,1fr);
+      repeat(
+        3,
+        1fr
+      );
+
   }
 
   .tf-grid{
+
     grid-template-columns:
       1fr 1fr;
+
   }
 
 }
@@ -832,25 +925,34 @@ th{
 ){
 
   .app{
+
     padding:
-      18px
+      17px
       11px
       60px;
+
   }
 
   .panel{
+
     padding:17px;
+
     border-radius:23px;
+
   }
 
   .metrics{
+
     grid-template-columns:
       1fr 1fr;
+
   }
 
-  .score-grid{
+  .validation-grid{
+
     grid-template-columns:
-      1fr 1fr;
+      1fr;
+
   }
 
 }
@@ -865,6 +967,10 @@ th{
 <div class="app">
 
 
+<!-- ======================================================
+     HEADER
+====================================================== -->
+
 <div class="header">
 
   <div>
@@ -874,21 +980,21 @@ th{
     </div>
 
     <div class="subtitle">
-      XAU/USD Multi-Timeframe Trend Engine
+      XAU/USD Trend Pullback Intelligence
     </div>
 
   </div>
 
 
-  <div class="badge">
-    M5 · M15 · H1 · H4
+  <div class="version">
+    V1.1 · VALIDATION
   </div>
 
 </div>
 
 
 <!-- ======================================================
-     CURRENT MARKET
+     MARKET STATE
 ====================================================== -->
 
 <section class="panel">
@@ -901,7 +1007,7 @@ th{
 
     <span
       id="time"
-      class="muted"
+      class="small"
     >
       —
     </span>
@@ -919,17 +1025,21 @@ th{
 
   <div class="score-grid">
 
-    <div class="score">
+
+    <div class="score-box">
 
       <div class="score-top">
 
-        <span>LONG SCORE</span>
+        <span>
+          LONG SCORE
+        </span>
 
         <b id="longScore">
           —
         </b>
 
       </div>
+
 
       <div class="bar">
         <div id="longBar"></div>
@@ -938,11 +1048,13 @@ th{
     </div>
 
 
-    <div class="score">
+    <div class="score-box">
 
       <div class="score-top">
 
-        <span>SHORT SCORE</span>
+        <span>
+          SHORT SCORE
+        </span>
 
         <b id="shortScore">
           —
@@ -950,18 +1062,20 @@ th{
 
       </div>
 
+
       <div class="bar">
         <div id="shortBar"></div>
       </div>
 
     </div>
 
+
   </div>
 
 
   <div
-    class="tf-grid"
     id="tfGrid"
+    class="tf-grid"
   >
   </div>
 
@@ -977,11 +1091,11 @@ th{
   <div class="title-row">
 
     <h2 class="title">
-      BACKTEST SETTINGS
+      STRATEGY SETTINGS
     </h2>
 
-    <span class="muted">
-      NO LOOK-AHEAD
+    <span class="small">
+      BALANCED V1.1
     </span>
 
   </div>
@@ -993,13 +1107,13 @@ th{
     <div class="field">
 
       <label>
-        History M5 Bars
+        M5 History
       </label>
 
       <input
         id="bars"
         type="number"
-        value="2500"
+        value="4500"
       >
 
     </div>
@@ -1008,13 +1122,13 @@ th{
     <div class="field">
 
       <label>
-        Minimum Score
+        Min Score
       </label>
 
       <input
         id="minScore"
         type="number"
-        value="80"
+        value="76"
       >
 
     </div>
@@ -1023,13 +1137,13 @@ th{
     <div class="field">
 
       <label>
-        M15 Minimum ADX
+        M15 Min ADX
       </label>
 
       <input
         id="minADX"
         type="number"
-        value="18"
+        value="16"
       >
 
     </div>
@@ -1054,13 +1168,13 @@ th{
     <div class="field">
 
       <label>
-        Pullback Bars
+        Pullback Memory
       </label>
 
       <input
         id="pullbackBars"
         type="number"
-        value="3"
+        value="5"
       >
 
     </div>
@@ -1069,13 +1183,13 @@ th{
     <div class="field">
 
       <label>
-        Pullback ATR Tolerance
+        Pullback Tolerance
       </label>
 
       <input
         id="pullbackToleranceATR"
         type="number"
-        value="0.18"
+        value="0.22"
         step="0.01"
       >
 
@@ -1085,13 +1199,13 @@ th{
     <div class="field">
 
       <label>
-        Minimum Candle Body
+        Minimum Body
       </label>
 
       <input
         id="minBody"
         type="number"
-        value="0.45"
+        value="0.35"
         step="0.05"
       >
 
@@ -1107,7 +1221,7 @@ th{
       <input
         id="maxChaseATR"
         type="number"
-        value="0.75"
+        value="0.90"
         step="0.05"
       >
 
@@ -1154,7 +1268,7 @@ th{
       <input
         id="maxStopATR"
         type="number"
-        value="2.00"
+        value="2.0"
         step="0.05"
       >
 
@@ -1164,7 +1278,7 @@ th{
     <div class="field">
 
       <label>
-        Structure Buffer ATR
+        Structure Buffer
       </label>
 
       <input
@@ -1204,7 +1318,7 @@ th{
     <div class="field">
 
       <label>
-        Breakeven At R
+        Breakeven R
       </label>
 
       <input
@@ -1220,7 +1334,7 @@ th{
     <div class="field">
 
       <label>
-        Max Hold M5 Bars
+        Max Hold Bars
       </label>
 
       <input
@@ -1241,7 +1355,7 @@ th{
       <input
         id="cooldownBars"
         type="number"
-        value="3"
+        value="2"
       >
 
     </div>
@@ -1250,7 +1364,7 @@ th{
     <div class="field">
 
       <label>
-        Risk Per Trade %
+        Risk %
       </label>
 
       <input
@@ -1281,7 +1395,7 @@ th{
     <div class="field">
 
       <label>
-        Cost Per Trade R
+        Cost R
       </label>
 
       <input
@@ -1346,7 +1460,7 @@ th{
     <div class="field">
 
       <label>
-        UTC Session Start
+        UTC Start
       </label>
 
       <input
@@ -1361,7 +1475,7 @@ th{
     <div class="field">
 
       <label>
-        UTC Session End
+        UTC End
       </label>
 
       <input
@@ -1372,14 +1486,15 @@ th{
 
     </div>
 
+
   </div>
 
 
   <button
-    id="run"
+    id="runButton"
     onclick="runBacktest()"
   >
-    RUN TREND PULLBACK BACKTEST
+    RUN V1.1 BACKTEST
   </button>
 
 
@@ -1394,7 +1509,7 @@ th{
 
 
 <!-- ======================================================
-     RESULTS
+     MAIN PERFORMANCE
 ====================================================== -->
 
 <section class="panel">
@@ -1402,12 +1517,12 @@ th{
   <div class="title-row">
 
     <h2 class="title">
-      PERFORMANCE
+      FULL PERFORMANCE
     </h2>
 
     <span
       id="period"
-      class="muted"
+      class="small"
     >
       —
     </span>
@@ -1416,8 +1531,8 @@ th{
 
 
   <div
-    class="metrics"
     id="metrics"
+    class="metrics"
   >
   </div>
 
@@ -1431,6 +1546,7 @@ th{
       —
     </div>
 
+
     <div>
 
       <div
@@ -1443,12 +1559,72 @@ th{
         —
       </div>
 
-      <div class="muted">
-        Grade is based on trade count, PF,
-        expectancy and drawdown.
+
+      <div class="small">
+        Strong grades require a meaningful trade sample.
       </div>
 
     </div>
+
+  </div>
+
+</section>
+
+
+<!-- ======================================================
+     VALIDATION
+====================================================== -->
+
+<section class="panel">
+
+  <div class="title-row">
+
+    <h2 class="title">
+      ROBUSTNESS CHECK
+    </h2>
+
+    <span
+      id="splitTime"
+      class="small"
+    >
+      70 / 30 SPLIT
+    </span>
+
+  </div>
+
+
+  <div class="validation-grid">
+
+
+    <div class="validation-card">
+
+      <div class="validation-title">
+        FIRST 70% · DEVELOPMENT
+      </div>
+
+      <div
+        id="training"
+        class="validation-stats"
+      >
+      </div>
+
+    </div>
+
+
+    <div class="validation-card">
+
+      <div class="validation-title">
+        LAST 30% · VALIDATION
+      </div>
+
+      <div
+        id="validation"
+        class="validation-stats"
+      >
+      </div>
+
+    </div>
+
 
   </div>
 
@@ -1467,8 +1643,8 @@ th{
       EQUITY CURVE
     </h2>
 
-    <span class="muted">
-      FIXED FRACTIONAL
+    <span class="small">
+      0.5% FIXED RISK DEFAULT
     </span>
 
   </div>
@@ -1484,7 +1660,7 @@ th{
 
 
 <!-- ======================================================
-     TRADE LOG
+     TRADES
 ====================================================== -->
 
 <section class="panel">
@@ -1495,8 +1671,8 @@ th{
       TRADE LOG
     </h2>
 
-    <span class="muted">
-      LATEST 250
+    <span class="small">
+      MOST RECENT FIRST
     </span>
 
   </div>
@@ -1514,13 +1690,13 @@ th{
 
           <th>Score</th>
 
-          <th>Entry Time</th>
-
           <th>Entry</th>
 
-          <th>Stop</th>
+          <th>Price</th>
 
-          <th>Target</th>
+          <th>SL</th>
+
+          <th>TP</th>
 
           <th>Exit</th>
 
@@ -1535,7 +1711,7 @@ th{
       </thead>
 
 
-      <tbody id="trades">
+      <tbody id="tradeBody">
       </tbody>
 
     </table>
@@ -1551,7 +1727,7 @@ th{
 <script>
 
 /* =========================================================
-   HELPERS
+   GLOBALS
 ========================================================= */
 
 const $ =
@@ -1561,9 +1737,13 @@ const $ =
     );
 
 
-let latestData =
+let lastData =
   null;
 
+
+/* =========================================================
+   FORMATTING
+========================================================= */
 
 function num(
   value,
@@ -1579,6 +1759,7 @@ function num(
   ){
     return "—";
   }
+
 
   return Number(value)
     .toLocaleString(
@@ -1601,24 +1782,28 @@ function dateText(value){
     return "—";
   }
 
+
   return new Date(value)
     .toLocaleString();
 
 }
 
 
-function status(
-  text,
+function setStatus(
+  message,
   type = ""
 ){
 
-  $("status")
-    .className =
-      `status ${type}`;
+  const element =
+    $("status");
 
-  $("status")
-    .textContent =
-      text;
+
+  element.className =
+    `status ${type}`;
+
+
+  element.textContent =
+    message;
 
 }
 
@@ -1629,7 +1814,7 @@ function status(
 
 function buildQuery(){
 
-  const ids = [
+  const fields = [
 
     "bars",
 
@@ -1685,7 +1870,7 @@ function buildQuery(){
 
 
   for(
-    const id of ids
+    const id of fields
   ){
 
     query.set(
@@ -1708,7 +1893,7 @@ function buildQuery(){
 async function runBacktest(){
 
   const button =
-    $("run");
+    $("runButton");
 
 
   button.disabled =
@@ -1719,24 +1904,23 @@ async function runBacktest(){
     "ANALYSING…";
 
 
-  status(
+  setStatus(
     "Loading M5, M15, H1 and H4 history…"
   );
 
 
   try{
 
-    const query =
-      buildQuery();
-
-
     const response =
       await fetch(
-        `/api/backtest?${query.toString()}`,
+
+        `/api/backtest?${buildQuery().toString()}`,
+
         {
           cache:
             "no-store"
         }
+
       );
 
 
@@ -1757,15 +1941,15 @@ async function runBacktest(){
     }
 
 
-    latestData =
+    lastData =
       data;
 
 
     render(data);
 
 
-    status(
-      `Complete. ${data.metrics.trades} trades evaluated.`,
+    setStatus(
+      `Complete · ${data.metrics.trades} trades · ${num(data.metrics.totalR,2)}R`,
       "good"
     );
 
@@ -1775,10 +1959,12 @@ async function runBacktest(){
     console.error(error);
 
 
-    status(
-      error.message,
+    setStatus(
+      error.message ||
+      "Backtest failed",
       "bad"
     );
+
 
   }finally{
 
@@ -1787,7 +1973,7 @@ async function runBacktest(){
 
 
     button.textContent =
-      "RUN TREND PULLBACK BACKTEST";
+      "RUN V1.1 BACKTEST";
 
   }
 
@@ -1795,7 +1981,7 @@ async function runBacktest(){
 
 
 /* =========================================================
-   RENDER
+   MASTER RENDER
 ========================================================= */
 
 function render(data){
@@ -1807,6 +1993,12 @@ function render(data){
 
   renderMetrics(
     data.metrics
+  );
+
+
+  renderValidation(
+    data.training,
+    data.validation
   );
 
 
@@ -1825,11 +2017,16 @@ function render(data){
     .textContent =
       `${dateText(data.period.start)} → ${dateText(data.period.end)}`;
 
+
+  $("splitTime")
+    .textContent =
+      `Validation begins ${dateText(data.splitTime)}`;
+
 }
 
 
 /* =========================================================
-   LIVE MARKET
+   CURRENT MARKET
 ========================================================= */
 
 function renderLatest(latest){
@@ -1839,20 +2036,24 @@ function renderLatest(latest){
   }
 
 
-  $("bias")
-    .textContent =
-      latest.bias;
+  const bias =
+    $("bias");
 
 
-  $("bias")
-    .className =
-      `bias ${
-        latest.bias === "BULLISH"
-          ? "bull"
-          : latest.bias === "BEARISH"
-            ? "bear"
-            : "neutral"
-      }`;
+  bias.textContent =
+    latest.bias;
+
+
+  bias.className =
+    `bias ${
+      latest.bias ===
+        "BULLISH"
+        ? "bull"
+        : latest.bias ===
+          "BEARISH"
+          ? "bear"
+          : "neutral"
+    }`;
 
 
   $("longScore")
@@ -1882,23 +2083,27 @@ function renderLatest(latest){
       );
 
 
-  const container =
+  const grid =
     $("tfGrid");
 
 
-  container.innerHTML =
+  grid.innerHTML =
     "";
 
 
-  const names = {
+  const labels = {
 
-    m5:"M5",
+    m5:
+      "M5",
 
-    m15:"M15",
+    m15:
+      "M15",
 
-    h1:"H1",
+    h1:
+      "H1",
 
-    h4:"H4"
+    h4:
+      "H4"
 
   };
 
@@ -1906,7 +2111,7 @@ function renderLatest(latest){
   for(
     const key of
     Object.keys(
-      names
+      labels
     )
   ){
 
@@ -1916,29 +2121,31 @@ function renderLatest(latest){
       ];
 
 
-    const cls =
-      tf.state === "BULLISH"
+    const className =
+      tf.direction ===
+        "BULLISH"
         ? "bull"
-        : tf.state === "BEARISH"
+        : tf.direction ===
+          "BEARISH"
           ? "bear"
           : "neutral";
 
 
-    container.innerHTML += `
+    grid.innerHTML += `
 
       <div class="tf">
 
         <h3>
-          ${names[key]}
+          ${labels[key]}
         </h3>
 
-        <div class="tf-state ${cls}">
-          ${tf.state}
+        <div class="tf-state ${className}">
+          ${tf.direction}
         </div>
 
         <div class="line">
           <span>Price</span>
-          <b>${num(tf.close,2)}</b>
+          <b>${num(tf.price,2)}</b>
         </div>
 
         <div class="line">
@@ -2046,7 +2253,7 @@ function renderMetrics(m){
 
     [
       "BUY / SELL",
-      `${m.buyTrades} / ${m.sellTrades}`
+      `${m.buys} / ${m.sells}`
     ]
 
   ];
@@ -2062,7 +2269,7 @@ function renderMetrics(m){
 
   for(
     const [
-      name,
+      label,
       value
     ] of values
   ){
@@ -2071,8 +2278,8 @@ function renderMetrics(m){
 
       <div class="metric">
 
-        <div class="metric-name">
-          ${name}
+        <div class="metric-label">
+          ${label}
         </div>
 
         <div class="metric-value">
@@ -2099,13 +2306,115 @@ function renderMetrics(m){
 
 
 /* =========================================================
+   VALIDATION
+========================================================= */
+
+function renderValidation(
+  training,
+  validation
+){
+
+  renderValidationBlock(
+    "training",
+    training
+  );
+
+
+  renderValidationBlock(
+    "validation",
+    validation
+  );
+
+}
+
+
+function renderValidationBlock(
+  id,
+  metrics
+){
+
+  const container =
+    $(id);
+
+
+  const values = [
+
+    [
+      "Trades",
+      metrics.trades
+    ],
+
+    [
+      "Win Rate",
+      `${num(metrics.winRate,1)}%`
+    ],
+
+    [
+      "Profit Factor",
+      num(
+        metrics.profitFactor,
+        2
+      )
+    ],
+
+    [
+      "Expectancy",
+      `${num(metrics.expectancyR,3)}R`
+    ],
+
+    [
+      "Total",
+      `${num(metrics.totalR,2)}R`
+    ],
+
+    [
+      "Max DD",
+      `${num(metrics.maxDrawdown,2)}%`
+    ]
+
+  ];
+
+
+  container.innerHTML =
+    "";
+
+
+  for(
+    const [
+      label,
+      value
+    ] of values
+  ){
+
+    container.innerHTML += `
+
+      <div class="v-stat">
+
+        <span>
+          ${label}
+        </span>
+
+        <b>
+          ${value}
+        </b>
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
    TRADES
 ========================================================= */
 
 function renderTrades(trades){
 
   const body =
-    $("trades");
+    $("tradeBody");
 
 
   body.innerHTML =
@@ -2113,6 +2422,7 @@ function renderTrades(trades){
 
 
   if(
+    !trades ||
     !trades.length
   ){
 
@@ -2125,10 +2435,10 @@ function renderTrades(trades){
           style="
             padding:30px;
             text-align:center;
-            color:#8998ad;
+            color:#8999af;
           "
         >
-          No trades found with these rules.
+          No qualifying trades.
         </td>
 
       </tr>
@@ -2144,8 +2454,9 @@ function renderTrades(trades){
     const trade of trades
   ){
 
-    const tagClass =
-      trade.side === "BUY"
+    const sideClass =
+      trade.side ===
+        "BUY"
         ? "buy"
         : "sell";
 
@@ -2163,13 +2474,13 @@ function renderTrades(trades){
       <tr>
 
         <td>
-          <span class="tag ${tagClass}">
+          <span class="tag ${sideClass}">
             ${trade.side}
           </span>
         </td>
 
         <td>
-          ${trade.score}/100
+          ${trade.score}
         </td>
 
         <td>
@@ -2214,7 +2525,7 @@ function renderTrades(trades){
 
 
 /* =========================================================
-   EQUITY CURVE
+   EQUITY CHART
 ========================================================= */
 
 function drawChart(curve){
@@ -2250,6 +2561,14 @@ function drawChart(curve){
     dpr;
 
 
+  canvas.style.width =
+    `${width}px`;
+
+
+  canvas.style.height =
+    `${height}px`;
+
+
   const ctx =
     canvas.getContext(
       "2d"
@@ -2277,7 +2596,7 @@ function drawChart(curve){
   ){
 
     ctx.fillStyle =
-      "#8797ad";
+      "#8999af";
 
 
     ctx.font =
@@ -2285,7 +2604,7 @@ function drawChart(curve){
 
 
     ctx.fillText(
-      "Not enough trades for an equity curve.",
+      "Not enough trades for equity curve.",
       20,
       35
     );
@@ -2326,10 +2645,15 @@ function drawChart(curve){
   ){
 
     min -= 1;
+
     max += 1;
 
   }
 
+
+  /*
+   * Grid.
+   */
 
   ctx.strokeStyle =
     "rgba(255,255,255,.055)";
@@ -2376,6 +2700,10 @@ function drawChart(curve){
   }
 
 
+  /*
+   * Gradient equity curve.
+   */
+
   const gradient =
     ctx.createLinearGradient(
       padding,
@@ -2394,13 +2722,13 @@ function drawChart(curve){
 
   gradient.addColorStop(
     .5,
-    "#54dad9"
+    "#50dadd"
   );
 
 
   gradient.addColorStop(
     1,
-    "#48dc8b"
+    "#49df8d"
   );
 
 
@@ -2491,12 +2819,12 @@ window.addEventListener(
   () => {
 
     if(
-      latestData?.metrics
+      lastData?.metrics
         ?.equityCurve
     ){
 
       drawChart(
-        latestData.metrics
+        lastData.metrics
           .equityCurve
       );
 
@@ -2507,7 +2835,7 @@ window.addEventListener(
 
 
 /* =========================================================
-   START
+   INITIAL RUN
 ========================================================= */
 
 window.addEventListener(
@@ -2518,4 +2846,5 @@ window.addEventListener(
 </script>
 
 </body>
+
 </html>
