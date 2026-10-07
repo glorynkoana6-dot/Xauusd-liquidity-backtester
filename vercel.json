@@ -1,13 +1,23 @@
 {
-  "name": "tyson-trend-pullback-v1-3",
-  "version": "1.3.0",
-  "private": true,
-  "type": "module",
-  "description": "Robust XAUUSD multi-timeframe walk-forward EMA pullback backtester",
-  "engines": {
-    "node": ">=20"
-  },
-  "scripts": {
-    "start": "vercel dev"
-  }
+  "version": 2,
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ]
 }
