@@ -7,965 +7,1840 @@
 
 <meta
   name="viewport"
-  content="width=device-width,initial-scale=1,viewport-fit=cover"
+  content="width=device-width, initial-scale=1, viewport-fit=cover"
 >
 
 <meta
   name="theme-color"
-  content="#050607"
+  content="#05080d"
 >
 
-<title>
-  MKAYFX Liquidity Backtester
-</title>
+<meta
+  name="apple-mobile-web-app-capable"
+  content="yes"
+>
+
+<meta
+  name="apple-mobile-web-app-status-bar-style"
+  content="black-translucent"
+>
+
+<title>TYSON EMA LAB</title>
+
 
 <style>
 
-*{
-  box-sizing:border-box;
-  -webkit-tap-highlight-color:transparent;
+/* =========================================================
+   RESET
+========================================================= */
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
-:root{
-  --bg:#050607;
-  --panel:#0b0e12;
-  --panel2:#10141a;
-  --line:rgba(255,255,255,.075);
-  --line2:rgba(255,255,255,.13);
-  --text:#f5f7fa;
-  --muted:#717b89;
-  --gold:#f2c75c;
-  --green:#36dfa1;
-  --red:#ff6076;
-  --blue:#5caaff;
+
+html {
+  scroll-behavior: smooth;
 }
 
-body{
-  margin:0;
 
-  min-height:100vh;
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  background:
+    radial-gradient(
+      circle at 50% -20%,
+      rgba(37,99,235,.15),
+      transparent 34%
+    ),
+    linear-gradient(
+      180deg,
+      #07101b 0%,
+      #030609 44%,
+      #05070a 100%
+    );
+
+  color: #f4f7fb;
 
   font-family:
-    Inter,
     -apple-system,
     BlinkMacSystemFont,
     "SF Pro Display",
-    Arial,
+    "Segoe UI",
     sans-serif;
-
-  color:var(--text);
-
-  background:
-    radial-gradient(
-      circle at 10% -10%,
-      rgba(242,199,92,.12),
-      transparent 27%
-    ),
-    radial-gradient(
-      circle at 100% 40%,
-      rgba(92,170,255,.055),
-      transparent 25%
-    ),
-    var(--bg);
 }
 
-button,
-input,
-select{
-  font:inherit;
+
+/* =========================================================
+   VARIABLES
+========================================================= */
+
+:root {
+
+  --bg: #05080d;
+
+  --panel: rgba(14,22,33,.88);
+
+  --panel2: rgba(8,14,22,.94);
+
+  --border: rgba(132,164,205,.18);
+
+  --border2: rgba(132,164,205,.28);
+
+  --text: #f4f7fb;
+
+  --muted: #8e9cb1;
+
+  --green: #48db8b;
+
+  --red: #ff616c;
+
+  --blue: #63a8ff;
+
+  --cyan: #54d9dc;
+
+  --gold: #ffcb64;
+
 }
 
-.app{
-  width:min(1200px,100%);
-  margin:auto;
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.app {
+
+  width: min(
+    100%,
+    1180px
+  );
+
+  margin: 0 auto;
 
   padding:
-    calc(10px + env(safe-area-inset-top))
-    12px
-    calc(30px + env(safe-area-inset-bottom));
+    24px
+    18px
+    80px;
+
 }
 
-.topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
 
-  gap:12px;
+/* =========================================================
+   HEADER
+========================================================= */
 
-  padding:11px 13px;
+.header {
 
-  border:1px solid var(--line);
-  border-radius:18px;
+  display: flex;
 
-  background:rgba(7,9,12,.90);
+  align-items: center;
 
-  position:sticky;
-  top:6px;
-  z-index:50;
+  justify-content:
+    space-between;
 
-  backdrop-filter:blur(22px);
+  gap: 18px;
+
+  margin-bottom: 26px;
+
 }
 
-.brand{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
 
-.logo{
-  width:42px;
-  height:42px;
+.brand h1 {
 
-  display:grid;
-  place-items:center;
+  margin: 0;
 
-  border-radius:13px;
+  letter-spacing: .16em;
 
-  color:#080808;
-
-  font-size:11px;
-  font-weight:950;
-
-  background:
-    linear-gradient(
-      135deg,
-      #ffe78d,
-      #c38b25
+  font-size:
+    clamp(
+      24px,
+      5vw,
+      38px
     );
+
 }
 
-.brand h1{
-  margin:0;
 
-  font-size:12px;
-  letter-spacing:.12em;
-}
+.brand p {
 
-.brand small{
-  display:block;
+  color: var(--muted);
 
-  margin-top:3px;
-
-  color:var(--muted);
-
-  font-size:6px;
-  letter-spacing:.12em;
-}
-
-.status{
-  padding:7px 9px;
-
-  border:1px solid var(--line);
-  border-radius:999px;
-
-  color:var(--green);
-
-  font-size:7px;
-  font-weight:900;
-}
-
-.hero{
-  margin-top:10px;
-
-  padding:18px;
-
-  border:1px solid var(--line);
-  border-radius:22px;
-
-  background:
-    radial-gradient(
-      circle at 95% 0,
-      rgba(242,199,92,.1),
-      transparent 32%
-    ),
-    linear-gradient(
-      145deg,
-      rgba(17,20,26,.96),
-      rgba(8,10,13,.96)
-    );
-}
-
-.kicker{
-  color:var(--gold);
-
-  font-size:7px;
-  font-weight:950;
-  letter-spacing:.15em;
-}
-
-.hero h2{
   margin:
-    8px 0
-    3px;
+    7px 0 0;
 
-  font-size:30px;
-  letter-spacing:-.04em;
+  font-size: 15px;
+
 }
 
-.hero p{
-  margin:0;
 
-  max-width:650px;
+.feed-pill {
 
-  color:var(--muted);
+  padding:
+    13px 17px;
 
-  font-size:8px;
-  line-height:1.6;
-}
+  border:
+    1px solid
+    var(--border2);
 
-.settings{
-  display:grid;
-
-  grid-template-columns:
-    repeat(6,minmax(0,1fr));
-
-  gap:7px;
-
-  margin-top:12px;
-}
-
-.field{
-  padding:9px;
-
-  border:1px solid var(--line);
-  border-radius:11px;
-
-  background:rgba(255,255,255,.018);
-}
-
-.field label{
-  display:block;
-
-  margin-bottom:6px;
-
-  color:var(--muted);
-
-  font-size:6px;
-  font-weight:900;
-}
-
-.field input,
-.field select{
-  width:100%;
-
-  border:0;
-  outline:none;
-
-  color:var(--text);
-
-  background:transparent;
-
-  font-size:11px;
-  font-weight:800;
-}
-
-.runRow{
-  display:flex;
-  gap:7px;
-
-  margin-top:10px;
-}
-
-.runBtn{
-  flex:1;
-
-  padding:13px 15px;
-
-  border:0;
-  border-radius:12px;
-
-  color:#080808;
+  border-radius: 999px;
 
   background:
-    linear-gradient(
-      135deg,
-      #ffe383,
-      #ca9022
-    );
+    rgba(5,10,16,.8);
 
-  font-size:8px;
-  font-weight:950;
-  letter-spacing:.08em;
+  color: #9eabc0;
+
+  white-space: nowrap;
+
+  font-size: 13px;
+
 }
 
-.secondaryBtn{
-  padding:13px 15px;
 
-  border:1px solid var(--line);
-  border-radius:12px;
+/* =========================================================
+   PANEL
+========================================================= */
 
-  color:var(--text);
-  background:rgba(255,255,255,.025);
+.panel {
 
-  font-size:8px;
-  font-weight:900;
-}
-
-.error{
-  display:none;
-
-  margin-top:8px;
-  padding:10px;
-
-  border:1px solid rgba(255,96,118,.2);
-  border-radius:10px;
-
-  color:#ff9baa;
-
-  background:rgba(255,96,118,.06);
-
-  font-size:7px;
-}
-
-.error.show{
-  display:block;
-}
-
-.results{
-  display:none;
-}
-
-.results.show{
-  display:block;
-}
-
-.summaryGrid{
-  display:grid;
-
-  grid-template-columns:
-    repeat(6,1fr);
-
-  gap:7px;
-
-  margin-top:9px;
-}
-
-.stat{
-  min-height:91px;
-
-  padding:12px;
-
-  border:1px solid var(--line);
-  border-radius:14px;
+  position: relative;
 
   background:
     linear-gradient(
       145deg,
-      rgba(17,20,26,.9),
-      rgba(8,10,13,.9)
+      rgba(16,25,38,.94),
+      rgba(7,13,20,.94)
     );
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 28px;
+
+  padding: 24px;
+
+  margin-bottom: 22px;
+
+  box-shadow:
+    0 20px 60px
+    rgba(0,0,0,.28);
+
+  overflow: hidden;
+
 }
 
-.stat label{
-  color:var(--muted);
 
-  font-size:6px;
-  font-weight:900;
-}
+.panel::before {
 
-.stat strong{
-  display:block;
+  content: "";
 
-  margin-top:10px;
+  position: absolute;
 
-  font-size:22px;
-  letter-spacing:-.04em;
-}
+  inset:
+    0 0 auto 0;
 
-.stat span{
-  display:block;
-
-  margin-top:4px;
-
-  color:var(--muted);
-
-  font-size:6px;
-}
-
-.good{
-  color:var(--green);
-}
-
-.bad{
-  color:var(--red);
-}
-
-.gold{
-  color:var(--gold);
-}
-
-.card{
-  margin-top:9px;
-  padding:14px;
-
-  border:1px solid var(--line);
-  border-radius:17px;
+  height: 1px;
 
   background:
     linear-gradient(
-      145deg,
-      rgba(16,19,25,.93),
-      rgba(7,9,12,.93)
+      90deg,
+      transparent,
+      rgba(99,168,255,.45),
+      transparent
     );
+
 }
 
-.cardHead{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
 
-  gap:10px;
+.panel-title {
 
-  margin-bottom:11px;
+  display: flex;
+
+  align-items: center;
+
+  justify-content:
+    space-between;
+
+  gap: 14px;
+
+  margin-bottom: 20px;
+
 }
 
-.cardTitle{
-  font-size:9px;
-  font-weight:950;
-  letter-spacing:.08em;
+
+.panel-title h2 {
+
+  margin: 0;
+
+  font-size: 17px;
+
+  letter-spacing: .14em;
+
+  color: #b8c4d5;
+
 }
 
-.cardSub{
-  margin-top:3px;
 
-  color:var(--muted);
+.small {
 
-  font-size:6px;
+  color: var(--muted);
+
+  font-size: 12px;
+
 }
 
-.funnel{
-  display:grid;
+
+/* =========================================================
+   CURRENT BIAS
+========================================================= */
+
+.bias-grid {
+
+  display: grid;
 
   grid-template-columns:
-    repeat(5,1fr);
+    repeat(
+      4,
+      minmax(0,1fr)
+    );
 
-  gap:6px;
+  gap: 14px;
+
 }
 
-.funnelBox{
-  padding:11px;
 
-  border:1px solid var(--line);
-  border-radius:11px;
+.metric {
 
-  background:rgba(255,255,255,.015);
+  padding: 18px;
+
+  background:
+    rgba(4,9,15,.58);
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 19px;
+
 }
 
-.funnelBox label{
-  display:block;
 
-  color:var(--muted);
+.metric .label {
 
-  font-size:6px;
+  color: var(--muted);
+
+  text-transform:
+    uppercase;
+
+  letter-spacing: .08em;
+
+  font-size: 12px;
+
+  margin-bottom: 10px;
+
 }
 
-.funnelBox strong{
-  display:block;
 
-  margin-top:7px;
+.metric .value {
 
-  font-size:15px;
+  font-size: 23px;
+
+  font-weight: 800;
+
 }
 
-.chart{
-  position:relative;
 
-  height:240px;
+.metric .sub {
 
-  overflow:hidden;
+  margin-top: 7px;
 
-  border:1px solid rgba(255,255,255,.04);
-  border-radius:13px;
+  color: var(--muted);
 
-  background:#07090c;
+  font-size: 12px;
+
 }
 
-canvas{
-  width:100%;
-  height:100%;
-  display:block;
+
+/* =========================================================
+   BIAS WORD
+========================================================= */
+
+#bias {
+
+  font-size:
+    clamp(
+      36px,
+      8vw,
+      74px
+    );
+
+  font-weight: 900;
+
+  letter-spacing: -.04em;
+
+  margin:
+    6px 0 18px;
+
 }
 
-.tableWrap{
-  overflow:auto;
-  -webkit-overflow-scrolling:touch;
+
+.bullish {
+
+  color:
+    var(--green);
+
 }
 
-table{
-  width:100%;
-  min-width:920px;
 
-  border-collapse:collapse;
+.bearish {
 
-  font-size:7px;
+  color:
+    var(--red);
+
 }
 
-th{
-  padding:8px;
 
-  color:var(--muted);
+.neutral {
 
-  text-align:left;
+  color:
+    var(--gold);
 
-  font-size:6px;
-  letter-spacing:.06em;
-
-  border-bottom:1px solid var(--line);
 }
 
-td{
-  padding:9px 8px;
 
-  border-bottom:1px solid rgba(255,255,255,.035);
+/* =========================================================
+   SCORE BARS
+========================================================= */
 
-  white-space:nowrap;
+.score-row {
+
+  display: grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap: 16px;
+
 }
 
-.buy{
-  color:var(--green);
-  font-weight:900;
+
+.score-box {
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 18px;
+
+  padding: 17px;
+
+  background:
+    rgba(3,8,13,.48);
+
 }
 
-.sell{
-  color:var(--red);
-  font-weight:900;
+
+.score-top {
+
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  align-items: center;
+
+  font-size: 14px;
+
+  margin-bottom: 12px;
+
 }
 
-.win{
-  color:var(--green);
+
+.progress {
+
+  height: 7px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(255,255,255,.06);
+
+  overflow: hidden;
+
 }
 
-.loss{
-  color:var(--red);
+
+.progress > div {
+
+  height: 100%;
+
+  width: 0%;
+
+  border-radius: inherit;
+
+  transition:
+    width .5s ease;
+
 }
 
-.empty{
-  padding:30px;
 
-  text-align:center;
+#bullBar {
 
-  color:var(--muted);
+  background:
+    linear-gradient(
+      90deg,
+      #239d64,
+      #4ce79a
+    );
 
-  font-size:8px;
 }
 
-.loader{
-  display:none;
 
-  position:fixed;
-  inset:0;
+#bearBar {
 
-  z-index:100;
+  background:
+    linear-gradient(
+      90deg,
+      #b83846,
+      #ff6874
+    );
 
-  place-items:center;
-
-  background:rgba(4,5,7,.78);
-
-  backdrop-filter:blur(12px);
 }
 
-.loader.show{
-  display:grid;
+
+/* =========================================================
+   SETTINGS
+========================================================= */
+
+.settings {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0,1fr)
+    );
+
+  gap: 14px;
+
 }
 
-.loaderBox{
-  width:min(290px,calc(100% - 35px));
 
-  padding:22px;
+.field {
 
-  border:1px solid var(--line);
-  border-radius:18px;
+  display: flex;
 
-  text-align:center;
+  flex-direction: column;
 
-  background:#0d1015;
+  gap: 8px;
+
 }
 
-.spinner{
-  width:42px;
-  height:42px;
 
-  margin:auto;
+.field label {
 
-  border-radius:50%;
+  color: #97a5b9;
 
-  border:2px solid rgba(242,199,92,.12);
-  border-top-color:var(--gold);
+  font-size: 12px;
 
-  animation:spin .8s linear infinite;
+  letter-spacing: .05em;
+
+  text-transform: uppercase;
+
 }
 
-@keyframes spin{
-  to{
-    transform:rotate(360deg);
-  }
+
+input,
+select {
+
+  width: 100%;
+
+  border:
+    1px solid
+    var(--border2);
+
+  background:
+    rgba(2,7,12,.75);
+
+  color: #f5f7fb;
+
+  border-radius: 14px;
+
+  padding:
+    14px 13px;
+
+  font-size: 15px;
+
+  outline: none;
+
 }
 
-.loaderText{
-  margin-top:12px;
 
-  font-size:8px;
-  font-weight:900;
+input:focus,
+select:focus {
+
+  border-color:
+    var(--blue);
+
 }
 
-@media(max-width:850px){
 
-  .settings{
+.checkbox-row {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+}
+
+
+.checkbox-row input {
+
+  width: auto;
+
+}
+
+
+.btn {
+
+  width: 100%;
+
+  margin-top: 18px;
+
+  padding:
+    17px 20px;
+
+  border: 0;
+
+  border-radius: 17px;
+
+  color: #04101a;
+
+  font-size: 15px;
+
+  font-weight: 900;
+
+  letter-spacing: .05em;
+
+  cursor: pointer;
+
+  background:
+    linear-gradient(
+      90deg,
+      #62a9ff,
+      #50ded3,
+      #4ad98b
+    );
+
+  box-shadow:
+    0 12px 35px
+    rgba(69,181,255,.16);
+
+}
+
+
+.btn:disabled {
+
+  opacity: .45;
+
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+.summary-grid {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      6,
+      minmax(0,1fr)
+    );
+
+  gap: 12px;
+
+}
+
+
+.summary-card {
+
+  background:
+    rgba(3,8,14,.62);
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 18px;
+
+  padding: 16px;
+
+}
+
+
+.summary-card .k {
+
+  color: var(--muted);
+
+  font-size: 11px;
+
+  text-transform: uppercase;
+
+  letter-spacing: .07em;
+
+}
+
+
+.summary-card .v {
+
+  font-size: 22px;
+
+  font-weight: 850;
+
+  margin-top: 8px;
+
+}
+
+
+/* =========================================================
+   GRADE
+========================================================= */
+
+.grade-row {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 15px;
+
+  margin-top: 18px;
+
+  padding: 17px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 18px;
+
+  background:
+    rgba(0,0,0,.2);
+
+}
+
+
+.grade {
+
+  width: 58px;
+
+  height: 58px;
+
+  display: grid;
+
+  place-items: center;
+
+  flex:
+    0 0 auto;
+
+  border-radius: 15px;
+
+  font-size: 28px;
+
+  font-weight: 900;
+
+  background:
+    rgba(99,168,255,.12);
+
+  border:
+    1px solid
+    rgba(99,168,255,.25);
+
+}
+
+
+/* =========================================================
+   TF CARDS
+========================================================= */
+
+.tf-grid {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0,1fr)
+    );
+
+  gap: 13px;
+
+}
+
+
+.tf-card {
+
+  padding: 17px;
+
+  border:
+    1px solid
+    var(--border);
+
+  background:
+    rgba(3,8,14,.52);
+
+  border-radius: 18px;
+
+}
+
+
+.tf-name {
+
+  color: var(--blue);
+
+  font-size: 14px;
+
+  font-weight: 850;
+
+  margin-bottom: 11px;
+
+}
+
+
+.tf-alignment {
+
+  font-weight: 850;
+
+  font-size: 17px;
+
+  margin-bottom: 12px;
+
+}
+
+
+.ema-line {
+
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  gap: 8px;
+
+  font-size: 12px;
+
+  padding:
+    5px 0;
+
+  color: var(--muted);
+
+}
+
+
+.ema-line b {
+
+  color: #dae2ee;
+
+  font-weight: 650;
+
+}
+
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.table-wrap {
+
+  overflow-x: auto;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 18px;
+
+}
+
+
+table {
+
+  border-collapse:
+    collapse;
+
+  width: 100%;
+
+  min-width: 800px;
+
+  background:
+    rgba(3,8,14,.45);
+
+}
+
+
+th,
+td {
+
+  padding:
+    13px 14px;
+
+  border-bottom:
+    1px solid
+    rgba(255,255,255,.055);
+
+  text-align: left;
+
+  font-size: 13px;
+
+}
+
+
+th {
+
+  color: #91a1b7;
+
+  font-size: 11px;
+
+  letter-spacing: .06em;
+
+  text-transform: uppercase;
+
+}
+
+
+tbody tr:hover {
+
+  background:
+    rgba(99,168,255,.04);
+
+}
+
+
+.rank {
+
+  width: 28px;
+
+  height: 28px;
+
+  border-radius: 9px;
+
+  display: grid;
+
+  place-items: center;
+
+  background:
+    rgba(99,168,255,.1);
+
+  color:
+    var(--blue);
+
+  font-weight: 800;
+
+}
+
+
+/* =========================================================
+   TRADE TAGS
+========================================================= */
+
+.tag {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding:
+    5px 9px;
+
+  border-radius: 999px;
+
+  font-weight: 800;
+
+  font-size: 11px;
+
+}
+
+
+.buy {
+
+  color:
+    var(--green);
+
+  background:
+    rgba(72,219,139,.1);
+
+}
+
+
+.sell {
+
+  color:
+    var(--red);
+
+  background:
+    rgba(255,97,108,.1);
+
+}
+
+
+.tp {
+
+  color:
+    var(--green);
+
+}
+
+
+.sl {
+
+  color:
+    var(--red);
+
+}
+
+
+/* =========================================================
+   CHART
+========================================================= */
+
+.chart-box {
+
+  position: relative;
+
+  height: 260px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius: 18px;
+
+  background:
+    rgba(2,6,11,.55);
+
+  overflow: hidden;
+
+}
+
+
+canvas {
+
+  display: block;
+
+  width: 100%;
+
+  height: 100%;
+
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.status {
+
+  margin-top: 17px;
+
+  border-radius: 15px;
+
+  padding:
+    13px 15px;
+
+  color: #97a7ba;
+
+  border:
+    1px solid
+    var(--border);
+
+  background:
+    rgba(0,0,0,.2);
+
+}
+
+
+.status.ok {
+
+  border-color:
+    rgba(72,219,139,.35);
+
+  color:
+    #8ef1ba;
+
+  background:
+    rgba(72,219,139,.07);
+
+}
+
+
+.status.error {
+
+  border-color:
+    rgba(255,97,108,.35);
+
+  color:
+    #ff9ca4;
+
+  background:
+    rgba(255,97,108,.07);
+
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.disclaimer {
+
+  color: #78869b;
+
+  text-align: center;
+
+  line-height: 1.6;
+
+  font-size: 12px;
+
+  padding:
+    20px 8px;
+
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (
+  max-width: 900px
+) {
+
+  .settings {
+
     grid-template-columns:
-      repeat(3,1fr);
+      repeat(
+        2,
+        1fr
+      );
+
   }
 
-  .summaryGrid{
+
+  .summary-grid {
+
     grid-template-columns:
-      repeat(3,1fr);
+      repeat(
+        3,
+        1fr
+      );
+
   }
 
-  .funnel{
+
+  .bias-grid {
+
     grid-template-columns:
-      repeat(2,1fr);
+      repeat(
+        2,
+        1fr
+      );
+
   }
+
+
+  .tf-grid {
+
+    grid-template-columns:
+      repeat(
+        2,
+        1fr
+      );
+
+  }
+
 }
 
-@media(max-width:480px){
 
-  .settings{
+@media (
+  max-width: 580px
+) {
+
+  .app {
+
+    padding:
+      18px
+      12px
+      60px;
+
+  }
+
+
+  .header {
+
+    align-items:
+      flex-start;
+
+  }
+
+
+  .feed-pill {
+
+    padding:
+      10px 12px;
+
+    font-size: 10px;
+
+  }
+
+
+  .panel {
+
+    padding: 18px;
+
+    border-radius: 23px;
+
+  }
+
+
+  .settings {
+
     grid-template-columns:
-      repeat(2,1fr);
+      1fr 1fr;
+
   }
 
-  .summaryGrid{
+
+  .summary-grid {
+
     grid-template-columns:
-      repeat(2,1fr);
+      1fr 1fr;
+
   }
 
-  .hero h2{
-    font-size:26px;
+
+  .bias-grid {
+
+    grid-template-columns:
+      1fr 1fr;
+
   }
+
+
+  .score-row {
+
+    grid-template-columns:
+      1fr;
+
+  }
+
+
+  .tf-grid {
+
+    grid-template-columns:
+      1fr 1fr;
+
+  }
+
+
+  .summary-card .v {
+
+    font-size: 18px;
+
+  }
+
 }
 
 </style>
 
 </head>
 
+
 <body>
 
-<div
-  class="loader"
-  id="loader"
->
+<div class="app">
 
-  <div class="loaderBox">
 
-    <div class="spinner"></div>
+<!-- ======================================================
+     HEADER
+====================================================== -->
 
-    <div class="loaderText">
-      BACKTESTING LIQUIDITY ENGINE…
-    </div>
+<div class="header">
 
+  <div class="brand">
+
+    <h1>TYSON EMA LAB</h1>
+
+    <p>
+      Multi-Timeframe EMA Strategy Intelligence
+    </p>
+
+  </div>
+
+
+  <div class="feed-pill">
+    TWELVE DATA · BACKTEST
   </div>
 
 </div>
 
-<div class="app">
 
-<header class="topbar">
+<!-- ======================================================
+     CURRENT EMA STATE
+====================================================== -->
 
-  <div class="brand">
+<section class="panel">
 
-    <div class="logo">
-      MK
+  <div class="panel-title">
+
+    <h2>
+      CURRENT MTF STATE
+    </h2>
+
+    <span
+      class="small"
+      id="latestTime"
+    >
+      —
+    </span>
+
+  </div>
+
+
+  <div
+    id="bias"
+    class="neutral"
+  >
+    LOADING
+  </div>
+
+
+  <div class="score-row">
+
+    <div class="score-box">
+
+      <div class="score-top">
+
+        <span>
+          BULL SCORE
+        </span>
+
+        <b id="bullScore">
+          —
+        </b>
+
+      </div>
+
+      <div class="progress">
+
+        <div id="bullBar"></div>
+
+      </div>
+
     </div>
 
-    <div>
 
-      <h1>
-        MKAYFX
-      </h1>
+    <div class="score-box">
 
-      <small>
-        GOLD LIQUIDITY BACKTESTER
-      </small>
+      <div class="score-top">
+
+        <span>
+          BEAR SCORE
+        </span>
+
+        <b id="bearScore">
+          —
+        </b>
+
+      </div>
+
+      <div class="progress">
+
+        <div id="bearBar"></div>
+
+      </div>
 
     </div>
 
   </div>
 
-  <div class="status">
-    HISTORICAL
+
+  <div
+    class="tf-grid"
+    id="tfGrid"
+    style="margin-top:18px"
+  >
   </div>
 
-</header>
+</section>
 
-<section class="hero">
 
-  <div class="kicker">
-    XAU/USD · LIQUIDITY RESEARCH ENGINE
+<!-- ======================================================
+     SETTINGS
+====================================================== -->
+
+<section class="panel">
+
+  <div class="panel-title">
+
+    <h2>
+      CUSTOM STRATEGY
+    </h2>
+
+    <span class="small">
+      M5 EXECUTION
+    </span>
+
   </div>
 
-  <h2>
-    Raid Strategy Backtester
-  </h2>
-
-  <p>
-    Reconstructs liquidity using historical candles only.
-    A trade is tested after a qualifying liquidity raid and rejection.
-    Entries occur on the next completed M5 candle open.
-  </p>
 
   <div class="settings">
+
 
     <div class="field">
 
       <label>
-        MIN RAID SCORE
+        M5 Bars
       </label>
 
       <input
+        id="bars"
         type="number"
-        id="score"
-        value="70"
-        min="1"
+        value="2200"
+        min="600"
+        max="4500"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Trigger
+      </label>
+
+      <select id="trigger">
+
+        <option value="pullback">
+          EMA20 Pullback
+        </option>
+
+        <option value="continuation">
+          Continuation Break
+        </option>
+
+        <option value="fresh">
+          Fresh M5 Stack
+        </option>
+
+        <option value="every">
+          Every Qualified Bar
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Required TF Align
+      </label>
+
+      <select id="requiredAligned">
+
+        <option value="4">
+          4 / 4
+        </option>
+
+        <option
+          value="3"
+          selected
+        >
+          3 / 4
+        </option>
+
+        <option value="2">
+          2 / 4
+        </option>
+
+        <option value="1">
+          1 / 4
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Minimum EMA Score
+      </label>
+
+      <input
+        id="minScore"
+        type="number"
+        value="62"
+        min="25"
         max="100"
       >
 
     </div>
 
+
     <div class="field">
 
       <label>
-        TAKE PROFIT R
+        Stop ATR
       </label>
 
       <input
+        id="slATR"
         type="number"
+        value="1.20"
+        step="0.05"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Target R
+      </label>
+
+      <input
         id="rr"
-        value="1.5"
-        min=".25"
-        max="10"
-        step=".25"
+        type="number"
+        value="2.00"
+        step="0.1"
       >
 
     </div>
 
+
     <div class="field">
 
       <label>
-        SL ATR BUFFER
+        Max Hold M5 Bars
       </label>
 
       <input
+        id="maxHold"
         type="number"
-        id="slAtr"
-        value=".20"
-        min=".05"
-        max="3"
-        step=".05"
+        value="60"
       >
 
     </div>
 
+
     <div class="field">
 
       <label>
-        TEST BARS
+        Cooldown Bars
       </label>
 
-      <select id="bars">
+      <input
+        id="cooldownBars"
+        type="number"
+        value="3"
+      >
 
-        <option value="1000">
-          1,000 M5
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Risk Per Trade %
+      </label>
+
+      <input
+        id="riskPct"
+        type="number"
+        value="0.50"
+        step="0.05"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Initial Equity
+      </label>
+
+      <input
+        id="initialBalance"
+        type="number"
+        value="10000"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Trading Cost In R
+      </label>
+
+      <input
+        id="costR"
+        type="number"
+        value="0.03"
+        step="0.01"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Direction
+      </label>
+
+      <select id="side">
+
+        <option value="both">
+          Buy + Sell
         </option>
 
-        <option value="2000">
-          2,000 M5
+        <option value="long">
+          Buy Only
         </option>
 
-        <option
-          value="4000"
-          selected
-        >
-          4,000 M5
-        </option>
-
-        <option value="5000">
-          MAX 5,000
+        <option value="short">
+          Sell Only
         </option>
 
       </select>
 
     </div>
 
+
     <div class="field">
 
       <label>
-        STRUCTURE FILTER
+        Require H4 Align
       </label>
 
-      <select id="structure">
+      <select id="requireH4">
 
         <option
-          value="1"
+          value="true"
           selected
         >
-          ON
+          Yes
         </option>
 
-        <option value="0">
-          OFF
+        <option value="false">
+          No
         </option>
 
       </select>
 
     </div>
 
+
     <div class="field">
 
       <label>
-        MAX TRADE BARS
+        Require H1 Align
       </label>
 
-      <input
-        type="number"
-        id="maxBars"
-        value="72"
-        min="1"
-        max="1000"
-      >
+      <select id="requireH1">
+
+        <option
+          value="true"
+          selected
+        >
+          Yes
+        </option>
+
+        <option value="false">
+          No
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Require M15 Align
+      </label>
+
+      <select id="requireM15">
+
+        <option
+          value="false"
+          selected
+        >
+          No
+        </option>
+
+        <option value="true">
+          Yes
+        </option>
+
+      </select>
 
     </div>
 
   </div>
 
-  <div class="runRow">
 
-    <button
-      class="runBtn"
-      onclick="runBacktest(true)"
-    >
-      RUN BACKTEST
-    </button>
+  <button
+    id="runBtn"
+    class="btn"
+    onclick="runBacktest()"
+  >
+    RUN EMA STRATEGY LAB
+  </button>
 
-    <button
-      class="secondaryBtn"
-      onclick="resetDefaults()"
-    >
-      RESET
-    </button>
-
-  </div>
 
   <div
-    class="error"
-    id="error"
-  ></div>
+    id="status"
+    class="status"
+  >
+    Ready.
+  </div>
 
 </section>
 
-<section
-  class="results"
-  id="results"
->
 
-<div
-  class="summaryGrid"
-  id="summary"
-></div>
+<!-- ======================================================
+     CUSTOM RESULTS
+====================================================== -->
 
-<article class="card">
+<section class="panel">
 
-  <div class="cardHead">
+  <div class="panel-title">
 
-    <div>
+    <h2>
+      CUSTOM BACKTEST
+    </h2>
 
-      <div class="cardTitle">
-        EQUITY CURVE
-      </div>
-
-      <div class="cardSub">
-        Cumulative result measured in R
-      </div>
-
-    </div>
+    <span
+      class="small"
+      id="period"
+    >
+      —
+    </span>
 
   </div>
 
-  <div class="chart">
-
-    <canvas id="equityChart"></canvas>
-
-  </div>
-
-</article>
-
-<article class="card">
-
-  <div class="cardHead">
-
-    <div>
-
-      <div class="cardTitle">
-        SIGNAL FUNNEL
-      </div>
-
-      <div class="cardSub">
-        See where potential setups are being filtered
-      </div>
-
-    </div>
-
-  </div>
 
   <div
-    class="funnel"
-    id="funnel"
-  ></div>
+    class="summary-grid"
+    id="summary"
+  >
+  </div>
 
-</article>
 
-<article class="card">
+  <div class="grade-row">
 
-  <div class="cardHead">
+    <div
+      class="grade"
+      id="grade"
+    >
+      —
+    </div>
+
 
     <div>
 
-      <div class="cardTitle">
-        BACKTEST DETAILS
+      <div
+        id="verdict"
+        style="
+          font-weight:850;
+          margin-bottom:5px;
+        "
+      >
+        —
       </div>
 
-      <div class="cardSub">
-        Test configuration and historical sample
+      <div
+        class="small"
+        id="settingsSummary"
+      >
+        —
       </div>
 
     </div>
 
   </div>
 
-  <div
-    class="funnel"
-    id="details"
-  ></div>
+</section>
 
-</article>
 
-<article class="card">
+<!-- ======================================================
+     EQUITY CURVE
+====================================================== -->
 
-  <div class="cardHead">
+<section class="panel">
 
-    <div>
+  <div class="panel-title">
 
-      <div class="cardTitle">
-        TRADE LOG
-      </div>
+    <h2>
+      EQUITY CURVE
+    </h2>
 
-      <div class="cardSub">
-        Most recent trades first
-      </div>
-
-    </div>
+    <span class="small">
+      FIXED FRACTION RISK
+    </span>
 
   </div>
 
-  <div class="tableWrap">
+
+  <div class="chart-box">
+
+    <canvas id="equityCanvas"></canvas>
+
+  </div>
+
+</section>
+
+
+<!-- ======================================================
+     STRATEGY LAB
+====================================================== -->
+
+<section class="panel">
+
+  <div class="panel-title">
+
+    <h2>
+      AUTOMATIC STRATEGY LAB
+    </h2>
+
+    <span class="small">
+      BEST CONFIGURATIONS RANKED
+    </span>
+
+  </div>
+
+
+  <div class="table-wrap">
 
     <table>
 
@@ -974,59 +1849,135 @@ td{
         <tr>
 
           <th>#</th>
-          <th>TIME</th>
-          <th>SIDE</th>
-          <th>ZONE</th>
-          <th>RAID</th>
-          <th>ENTRY</th>
-          <th>SL</th>
-          <th>TP</th>
-          <th>RESULT</th>
-          <th>R</th>
+
+          <th>Strategy</th>
+
+          <th>Trades</th>
+
+          <th>WR</th>
+
+          <th>PF</th>
+
+          <th>Expectancy</th>
+
+          <th>Total R</th>
+
+          <th>DD</th>
+
+          <th>Final Equity</th>
+
+          <th>Grade</th>
 
         </tr>
 
       </thead>
 
-      <tbody id="tradeRows"></tbody>
+
+      <tbody id="labBody">
+      </tbody>
 
     </table>
 
   </div>
 
-</article>
+</section>
+
+
+<!-- ======================================================
+     TRADE LOG
+====================================================== -->
+
+<section class="panel">
+
+  <div class="panel-title">
+
+    <h2>
+      CUSTOM TRADE LOG
+    </h2>
+
+    <span class="small">
+      LATEST 200 MAX
+    </span>
+
+  </div>
+
+
+  <div class="table-wrap">
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>Side</th>
+
+          <th>Entry Time</th>
+
+          <th>Entry</th>
+
+          <th>SL</th>
+
+          <th>TP</th>
+
+          <th>Exit</th>
+
+          <th>R</th>
+
+          <th>EMA Score</th>
+
+          <th>TF Align</th>
+
+          <th>Result</th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody id="tradeBody">
+      </tbody>
+
+    </table>
+
+  </div>
 
 </section>
 
+
+<div class="disclaimer">
+
+  Historical backtest results do not guarantee future performance.
+  This engine deliberately uses completed higher-timeframe candles
+  and next-candle entries to reduce look-ahead bias.
+
 </div>
+
+
+</div>
+
 
 <script>
 
-let LAST_DATA =
-  null;
-
+/* =========================================================
+   HELPERS
+========================================================= */
 
 const $ =
-  id =>
-    document.getElementById(
-      id
-    );
+  (id) =>
+    document.getElementById(id);
 
 
-function fmt(
+function n(
   value,
-  digits = 2
+  decimals = 2
 ) {
 
-  const n =
-    Number(
-      value
-    );
-
-
   if (
+    value === null ||
+    value === undefined ||
     !Number.isFinite(
-      n
+      Number(value)
     )
   ) {
 
@@ -1035,686 +1986,782 @@ function fmt(
   }
 
 
-  return n.toLocaleString(
-    undefined,
-    {
-      minimumFractionDigits:
-        digits,
-      maximumFractionDigits:
-        digits
-    }
-  );
-}
-
-
-function fmtTime(
-  timestamp
-) {
-
-  const n =
-    Number(
-      timestamp
-    );
-
-
-  if (
-    !Number.isFinite(
-      n
-    )
-  ) {
-
-    return "—";
-
-  }
-
-
-  return new Date(
-    n
-  )
+  return Number(value)
     .toLocaleString(
-      [],
+      undefined,
       {
-        month:
-          "short",
-        day:
-          "2-digit",
-        hour:
-          "2-digit",
-        minute:
-          "2-digit"
+        minimumFractionDigits:
+          decimals,
+
+        maximumFractionDigits:
+          decimals
       }
     );
-}
-
-
-function resetDefaults() {
-
-  $("score").value =
-    70;
-
-
-  $("rr").value =
-    1.5;
-
-
-  $("slAtr").value =
-    .20;
-
-
-  $("bars").value =
-    4000;
-
-
-  $("structure").value =
-    1;
-
-
-  $("maxBars").value =
-    72;
 
 }
 
 
-async function runBacktest(
-  force = false
+function money(value) {
+
+  if (
+    !Number.isFinite(
+      Number(value)
+    )
+  ) {
+
+    return "—";
+
+  }
+
+
+  return Number(value)
+    .toLocaleString(
+      undefined,
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }
+    );
+
+}
+
+
+function dateText(value) {
+
+  if (!value) {
+    return "—";
+  }
+
+
+  const d =
+    new Date(value);
+
+
+  return d.toLocaleString();
+
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+function setStatus(
+  text,
+  type = ""
 ) {
 
-  $("error")
-    .classList
-    .remove(
-      "show"
-    );
+  const el =
+    $("status");
 
 
-  $("loader")
-    .classList
-    .add(
-      "show"
-    );
+  el.textContent =
+    text;
+
+
+  el.className =
+    `status ${type}`;
+
+}
+
+
+/* =========================================================
+   QUERY
+========================================================= */
+
+function buildQuery() {
+
+  return new URLSearchParams({
+
+    bars:
+      $("bars").value,
+
+    trigger:
+      $("trigger").value,
+
+    requiredAligned:
+      $("requiredAligned").value,
+
+    minScore:
+      $("minScore").value,
+
+    slATR:
+      $("slATR").value,
+
+    rr:
+      $("rr").value,
+
+    maxHold:
+      $("maxHold").value,
+
+    cooldownBars:
+      $("cooldownBars").value,
+
+    riskPct:
+      $("riskPct").value,
+
+    initialBalance:
+      $("initialBalance").value,
+
+    costR:
+      $("costR").value,
+
+    side:
+      $("side").value,
+
+    requireH4:
+      $("requireH4").value,
+
+    requireH1:
+      $("requireH1").value,
+
+    requireM15:
+      $("requireM15").value
+
+  });
+
+}
+
+
+/* =========================================================
+   RUN
+========================================================= */
+
+async function runBacktest() {
+
+  const btn =
+    $("runBtn");
+
+
+  btn.disabled =
+    true;
+
+
+  btn.textContent =
+    "RUNNING BACKTEST…";
+
+
+  setStatus(
+    "Downloading M5, M15, H1 and H4 data and rebuilding EMA history…"
+  );
 
 
   try {
 
-    const params =
-      new URLSearchParams({
-
-        score:
-          $("score").value,
-
-        rr:
-          $("rr").value,
-
-        slAtr:
-          $("slAtr").value,
-
-        bars:
-          $("bars").value,
-
-        structure:
-          $("structure").value,
-
-        maxBars:
-          $("maxBars").value,
-
-        oneTrade:
-          "1",
-
-        force:
-          force
-            ? "1"
-            : "0",
-
-        t:
-          Date.now()
-
-      });
+    const query =
+      buildQuery();
 
 
     const response =
       await fetch(
-
-        `/api/backtest?${params.toString()}`,
-
+        `/api/backtest?${query.toString()}`,
         {
           cache:
             "no-store"
         }
-
       );
 
 
-    const text =
-      await response.text();
-
-
-    let data;
-
-
-    try {
-
-      data =
-        JSON.parse(
-          text
-        );
-
-    } catch {
-
-      throw new Error(
-        `Invalid API response: ${text.slice(0,120)}`
-      );
-
-    }
+    const data =
+      await response.json();
 
 
     if (
       !response.ok ||
-      data.ok ===
-      false
+      !data.ok
     ) {
 
       throw new Error(
         data.error ||
-        `HTTP ${response.status}`
+        "Backtest failed"
       );
 
     }
 
 
-    LAST_DATA =
-      data;
+    renderAll(data);
 
 
-    render(
-      data
+    setStatus(
+      `Backtest complete. ${data.custom.metrics.trades} custom trades evaluated.`,
+      "ok"
     );
-
-
-    $("results")
-      .classList
-      .add(
-        "show"
-      );
 
 
   } catch (
     error
   ) {
 
-    console.error(
-      error
+    console.error(error);
+
+
+    setStatus(
+      error.message ||
+      "Something went wrong.",
+      "error"
     );
 
 
-    $("error")
-      .textContent =
-        error.message;
-
-
-    $("error")
-      .classList
-      .add(
-        "show"
-      );
-
   } finally {
 
-    $("loader")
-      .classList
-      .remove(
-        "show"
-      );
+    btn.disabled =
+      false;
+
+
+    btn.textContent =
+      "RUN EMA STRATEGY LAB";
 
   }
 
 }
 
 
-function render(
-  data
-) {
+/* =========================================================
+   RENDER ALL
+========================================================= */
 
-  const summary =
-    data.summary;
+function renderAll(data) {
 
-
-  const cards = [
-
-    {
-      label:
-        "TRADES",
-      value:
-        summary.trades,
-      sub:
-        "completed trades",
-      cls:
-        "gold"
-    },
-
-    {
-      label:
-        "WIN RATE",
-      value:
-        `${fmt(
-          summary.winRate,
-          1
-        )}%`,
-      sub:
-        `${summary.wins} wins / ${summary.losses} losses`,
-      cls:
-        summary.winRate >=
-        50
-          ? "good"
-          : "bad"
-    },
-
-    {
-      label:
-        "NET RESULT",
-      value:
-        `${
-          summary.netR >=
-          0
-            ? "+"
-            : ""
-        }${fmt(
-          summary.netR
-        )}R`,
-      sub:
-        "total strategy R",
-      cls:
-        summary.netR >=
-        0
-          ? "good"
-          : "bad"
-    },
-
-    {
-      label:
-        "PROFIT FACTOR",
-      value:
-        fmt(
-          summary.profitFactor
-        ),
-      sub:
-        "gross profit / gross loss",
-      cls:
-        summary.profitFactor >=
-        1
-          ? "good"
-          : "bad"
-    },
-
-    {
-      label:
-        "MAX DRAWDOWN",
-      value:
-        `${fmt(
-          summary.maxDrawdownR
-        )}R`,
-      sub:
-        "peak-to-trough",
-      cls:
-        "bad"
-    },
-
-    {
-      label:
-        "AVG TRADE",
-      value:
-        `${
-          summary.averageR >=
-          0
-            ? "+"
-            : ""
-        }${fmt(
-          summary.averageR,
-          3
-        )}R`,
-      sub:
-        `${fmt(
-          summary.averageBarsHeld,
-          1
-        )} bars average`,
-      cls:
-        summary.averageR >=
-        0
-          ? "good"
-          : "bad"
-    }
-
-  ];
-
-
-  $("summary")
-    .innerHTML =
-      cards
-
-        .map(
-          card => `
-
-            <div class="stat">
-
-              <label>
-                ${card.label}
-              </label>
-
-              <strong
-                class="${card.cls}"
-              >
-                ${card.value}
-              </strong>
-
-              <span>
-                ${card.sub}
-              </span>
-
-            </div>
-          `
-        )
-
-        .join("");
-
-
-  const funnel =
-    data.funnel;
-
-
-  const funnelRows = [
-
-    [
-      "LIQUIDITY STATES",
-      funnel.liquidityStates
-    ],
-
-    [
-      "SCORE ≥ MIN",
-      funnel.raidScoreQualified
-    ],
-
-    [
-      "SWEEPS",
-      funnel.penetrations
-    ],
-
-    [
-      "REJECTIONS",
-      funnel.rejectedSweeps
-    ],
-
-    [
-      "STRUCTURE PASS",
-      funnel.structurePassed
-    ]
-
-  ];
-
-
-  $("funnel")
-    .innerHTML =
-      funnelRows
-
-        .map(
-          ([label,value]) => `
-
-            <div class="funnelBox">
-
-              <label>
-                ${label}
-              </label>
-
-              <strong>
-                ${value}
-              </strong>
-
-            </div>
-          `
-        )
-
-        .join("");
-
-
-  const details = [
-
-    [
-      "MIN RAID",
-      data.settings.minRaidScore
-    ],
-
-    [
-      "RR",
-      `${data.settings.rr}R`
-    ],
-
-    [
-      "SL BUFFER",
-      `${data.settings.slAtrBuffer} ATR`
-    ],
-
-    [
-      "STRUCTURE",
-      data.settings.requireStructure
-        ? "ON"
-        : "OFF"
-    ],
-
-    [
-      "TESTED BARS",
-      data.settings.testedBars
-    ],
-
-    [
-      "DATA",
-      `${data.data.totalCandles} M5 candles`
-    ]
-
-  ];
-
-
-  $("details")
-    .innerHTML =
-      details
-
-        .map(
-          ([label,value]) => `
-
-            <div class="funnelBox">
-
-              <label>
-                ${label}
-              </label>
-
-              <strong>
-                ${value}
-              </strong>
-
-            </div>
-          `
-        )
-
-        .join("");
-
-
-  renderTrades(
-    data.trades
+  renderLatest(
+    data.latest
   );
 
 
-  requestAnimationFrame(
-    () =>
-      drawEquity(
-        data.trades
-      )
+  renderCustom(
+    data.custom,
+    data.meta
+  );
+
+
+  renderLab(
+    data.lab
+  );
+
+
+  renderTrades(
+    data.custom.trades ||
+    []
+  );
+
+
+  drawEquity(
+    data.custom.metrics
+      .equityCurve ||
+    []
   );
 
 }
 
 
-function renderTrades(
-  trades
+/* =========================================================
+   LATEST STATE
+========================================================= */
+
+function renderLatest(latest) {
+
+  if (!latest) {
+    return;
+  }
+
+
+  const bias =
+    $("bias");
+
+
+  bias.textContent =
+    latest.bias;
+
+
+  bias.className =
+    latest.bias ===
+    "BULLISH"
+      ? "bullish"
+      : latest.bias ===
+        "BEARISH"
+        ? "bearish"
+        : "neutral";
+
+
+  $("bullScore")
+    .textContent =
+      `${n(latest.bullScore,1)}%`;
+
+
+  $("bearScore")
+    .textContent =
+      `${n(latest.bearScore,1)}%`;
+
+
+  $("bullBar")
+    .style.width =
+      `${latest.bullScore || 0}%`;
+
+
+  $("bearBar")
+    .style.width =
+      `${latest.bearScore || 0}%`;
+
+
+  $("latestTime")
+    .textContent =
+      dateText(
+        latest.time
+      );
+
+
+  const tfGrid =
+    $("tfGrid");
+
+
+  tfGrid.innerHTML =
+    "";
+
+
+  for (
+    const key of [
+      "m5",
+      "m15",
+      "h1",
+      "h4"
+    ]
+  ) {
+
+    const tf =
+      latest.timeframes[key];
+
+
+    if (!tf) {
+      continue;
+    }
+
+
+    const cls =
+      tf.alignment ===
+      "BULLISH"
+        ? "bullish"
+        : tf.alignment ===
+          "BEARISH"
+          ? "bearish"
+          : "neutral";
+
+
+    tfGrid.innerHTML += `
+
+      <div class="tf-card">
+
+        <div class="tf-name">
+          ${tf.label}
+        </div>
+
+        <div class="tf-alignment ${cls}">
+          ${tf.alignment}
+        </div>
+
+        <div class="ema-line">
+          <span>Price</span>
+          <b>${n(tf.close,2)}</b>
+        </div>
+
+        <div class="ema-line">
+          <span>EMA20</span>
+          <b>${n(tf.ema20,2)}</b>
+        </div>
+
+        <div class="ema-line">
+          <span>EMA50</span>
+          <b>${n(tf.ema50,2)}</b>
+        </div>
+
+        <div class="ema-line">
+          <span>EMA200</span>
+          <b>${n(tf.ema200,2)}</b>
+        </div>
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   CUSTOM RESULTS
+========================================================= */
+
+function renderCustom(
+  custom,
+  meta
 ) {
+
+  const m =
+    custom.metrics;
+
+
+  const items = [
+
+    [
+      "Trades",
+      m.trades
+    ],
+
+    [
+      "Win Rate",
+      `${n(m.winRate,1)}%`
+    ],
+
+    [
+      "Profit Factor",
+      n(
+        m.profitFactor,
+        2
+      )
+    ],
+
+    [
+      "Expectancy",
+      `${n(m.expectancyR,3)}R`
+    ],
+
+    [
+      "Total",
+      `${n(m.totalR,2)}R`
+    ],
+
+    [
+      "Max DD",
+      `${n(m.maxDrawdownPct,2)}%`
+    ],
+
+    [
+      "Final Equity",
+      money(
+        m.finalBalance
+      )
+    ],
+
+    [
+      "Return",
+      `${n(m.returnPct,2)}%`
+    ],
+
+    [
+      "Average Win",
+      `${n(m.averageWinR,2)}R`
+    ],
+
+    [
+      "Average Loss",
+      `${n(m.averageLossR,2)}R`
+    ],
+
+    [
+      "BUY Trades",
+      m.longTrades
+    ],
+
+    [
+      "SELL Trades",
+      m.shortTrades
+    ]
+
+  ];
+
+
+  const summary =
+    $("summary");
+
+
+  summary.innerHTML =
+    "";
+
+
+  for (
+    const item of items
+  ) {
+
+    summary.innerHTML += `
+
+      <div class="summary-card">
+
+        <div class="k">
+          ${item[0]}
+        </div>
+
+        <div class="v">
+          ${item[1]}
+        </div>
+
+      </div>
+
+    `;
+
+  }
+
+
+  $("grade")
+    .textContent =
+      m.grade;
+
+
+  $("verdict")
+    .textContent =
+      m.verdict;
+
+
+  $("settingsSummary")
+    .textContent =
+      `${custom.settings.requiredAligned}/4 aligned · ${custom.settings.trigger} · ${custom.settings.slATR} ATR stop · ${custom.settings.rr}R target`;
+
+
+  $("period")
+    .textContent =
+      `${dateText(meta.backtestStart)} → ${dateText(meta.backtestEnd)}`;
+
+}
+
+
+/* =========================================================
+   LAB RESULTS
+========================================================= */
+
+function renderLab(lab) {
+
+  const body =
+    $("labBody");
+
+
+  body.innerHTML =
+    "";
+
+
+  lab.forEach(
+    (
+      result,
+      index
+    ) => {
+
+      const m =
+        result.metrics;
+
+
+      body.innerHTML += `
+
+        <tr>
+
+          <td>
+            <div class="rank">
+              ${index + 1}
+            </div>
+          </td>
+
+          <td>
+            <b>
+              ${result.name}
+            </b>
+          </td>
+
+          <td>
+            ${m.trades}
+          </td>
+
+          <td>
+            ${n(m.winRate,1)}%
+          </td>
+
+          <td>
+            ${n(m.profitFactor,2)}
+          </td>
+
+          <td>
+            ${n(m.expectancyR,3)}R
+          </td>
+
+          <td>
+            ${n(m.totalR,2)}R
+          </td>
+
+          <td>
+            ${n(m.maxDrawdownPct,2)}%
+          </td>
+
+          <td>
+            ${money(m.finalBalance)}
+          </td>
+
+          <td>
+            <b>
+              ${m.grade}
+            </b>
+          </td>
+
+        </tr>
+
+      `;
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   TRADE LOG
+========================================================= */
+
+function renderTrades(trades) {
+
+  const body =
+    $("tradeBody");
+
+
+  body.innerHTML =
+    "";
+
 
   if (
     !trades.length
   ) {
 
-    $("tradeRows")
-      .innerHTML = `
+    body.innerHTML = `
 
-        <tr>
+      <tr>
 
-          <td
-            colspan="10"
-            class="empty"
-          >
-            No trades generated with these settings.
-          </td>
+        <td
+          colspan="10"
+          style="
+            text-align:center;
+            color:#8795aa;
+            padding:30px;
+          "
+        >
+          No trades for this configuration.
+        </td>
 
-        </tr>
-      `;
+      </tr>
 
+    `;
 
     return;
 
   }
 
 
-  $("tradeRows")
-    .innerHTML =
-      trades
+  for (
+    const trade of trades
+  ) {
 
-        .map(
-          trade => {
-
-            const won =
-              trade.r >
-              0;
+    const sideClass =
+      trade.side === "BUY"
+        ? "buy"
+        : "sell";
 
 
-            return `
+    const resultClass =
+      trade.netR > 0
+        ? "tp"
+        : trade.netR < 0
+          ? "sl"
+          : "";
 
-              <tr>
 
-                <td>
-                  ${trade.id}
-                </td>
+    body.innerHTML += `
 
-                <td>
-                  ${fmtTime(
-                    trade.entryTime
-                  )}
-                </td>
+      <tr>
 
-                <td
-                  class="${
-                    trade.direction ===
-                    "BUY"
-                      ? "buy"
-                      : "sell"
-                  }"
-                >
-                  ${trade.direction}
-                </td>
+        <td>
+          <span class="tag ${sideClass}">
+            ${trade.side}
+          </span>
+        </td>
 
-                <td>
-                  ${trade.zoneName}
-                </td>
+        <td>
+          ${dateText(trade.entryTime)}
+        </td>
 
-                <td>
-                  ${fmt(
-                    trade.raidScore,
-                    1
-                  )}
-                </td>
+        <td>
+          ${n(trade.entry,2)}
+        </td>
 
-                <td>
-                  ${fmt(
-                    trade.entry
-                  )}
-                </td>
+        <td>
+          ${n(trade.stopLoss,2)}
+        </td>
 
-                <td>
-                  ${fmt(
-                    trade.stop
-                  )}
-                </td>
+        <td>
+          ${n(trade.takeProfit,2)}
+        </td>
 
-                <td>
-                  ${fmt(
-                    trade.target
-                  )}
-                </td>
+        <td>
+          ${n(trade.exitPrice,2)}
+        </td>
 
-                <td
-                  class="${
-                    won
-                      ? "win"
-                      : "loss"
-                  }"
-                >
-                  ${trade.result}
-                </td>
+        <td class="${resultClass}">
+          ${n(trade.netR,2)}R
+        </td>
 
-                <td
-                  class="${
-                    won
-                      ? "win"
-                      : "loss"
-                  }"
-                >
-                  ${
-                    trade.r >=
-                    0
-                      ? "+"
-                      : ""
-                  }${fmt(
-                    trade.r,
-                    2
-                  )}R
-                </td>
+        <td>
+          ${n(trade.emaScore,1)}%
+        </td>
 
-              </tr>
-            `;
+        <td>
+          ${trade.alignedTF}/4
+        </td>
 
-          }
-        )
+        <td class="${resultClass}">
+          ${trade.reason}
+        </td>
 
-        .join("");
+      </tr>
+
+    `;
+
+  }
 
 }
 
 
-function drawEquity(
-  newestFirst
-) {
+/* =========================================================
+   EQUITY CHART
+========================================================= */
+
+function drawEquity(curve) {
 
   const canvas =
-    $("equityChart");
+    $("equityCanvas");
 
 
-  const rect =
-    canvas.getBoundingClientRect();
+  const parent =
+    canvas.parentElement;
 
 
   const dpr =
-    Math.min(
-      window.devicePixelRatio ||
-      1,
-      2
-    );
+    window.devicePixelRatio ||
+    1;
+
+
+  const width =
+    parent.clientWidth;
+
+
+  const height =
+    parent.clientHeight;
 
 
   canvas.width =
-    Math.floor(
-      rect.width *
-      dpr
-    );
+    width * dpr;
 
 
   canvas.height =
-    Math.floor(
-      rect.height *
-      dpr
-    );
+    height * dpr;
+
+
+  canvas.style.width =
+    `${width}px`;
+
+
+  canvas.style.height =
+    `${height}px`;
 
 
   const ctx =
@@ -1723,22 +2770,10 @@ function drawEquity(
     );
 
 
-  ctx.setTransform(
+  ctx.scale(
     dpr,
-    0,
-    0,
-    dpr,
-    0,
-    0
+    dpr
   );
-
-
-  const width =
-    rect.width;
-
-
-  const height =
-    rect.height;
 
 
   ctx.clearRect(
@@ -1749,267 +2784,208 @@ function drawEquity(
   );
 
 
-  const trades =
-    [
-      ...newestFirst
-    ]
-    .reverse();
-
-
-  const values = [
-    0
-  ];
-
-
-  let equity =
-    0;
-
-
-  for (
-    const trade
-    of trades
+  if (
+    !curve ||
+    curve.length < 2
   ) {
-
-    equity +=
-      Number(
-        trade.r
-      ) ||
-      0;
-
-
-    values.push(
-      equity
-    );
-
-  }
-
-
-  const padding = {
-
-    left:
-      38,
-
-    right:
-      10,
-
-    top:
-      14,
-
-    bottom:
-      22
-
-  };
-
-
-  const min =
-    Math.min(
-      ...values,
-      0
-    );
-
-
-  const max =
-    Math.max(
-      ...values,
-      0
-    );
-
-
-  const range =
-    Math.max(
-      max -
-      min,
-      1
-    );
-
-
-  const plotWidth =
-    width -
-    padding.left -
-    padding.right;
-
-
-  const plotHeight =
-    height -
-    padding.top -
-    padding.bottom;
-
-
-  function x(
-    index
-  ) {
-
-    return (
-      padding.left +
-      index /
-      Math.max(
-        values.length -
-        1,
-        1
-      ) *
-      plotWidth
-    );
-
-  }
-
-
-  function y(
-    value
-  ) {
-
-    return (
-      padding.top +
-      (
-        max -
-        value
-      ) /
-      range *
-      plotHeight
-    );
-
-  }
-
-
-  for (
-    let i = 0;
-    i <=
-      4;
-    i++
-  ) {
-
-    const yy =
-      padding.top +
-      plotHeight *
-      i /
-      4;
-
-
-    ctx.strokeStyle =
-      "rgba(255,255,255,.05)";
-
-
-    ctx.beginPath();
-
-
-    ctx.moveTo(
-      padding.left,
-      yy
-    );
-
-
-    ctx.lineTo(
-      padding.left +
-      plotWidth,
-      yy
-    );
-
-
-    ctx.stroke();
-
-
-    const value =
-      max -
-      range *
-      i /
-      4;
-
 
     ctx.fillStyle =
-      "#66707d";
+      "#8493a8";
 
 
     ctx.font =
-      "7px -apple-system, sans-serif";
-
-
-    ctx.textAlign =
-      "right";
+      "14px -apple-system";
 
 
     ctx.fillText(
-      `${fmt(
-        value,
-        1
-      )}R`,
-      padding.left -
-      5,
-      yy +
-      2
+      "Not enough trades to draw equity curve.",
+      20,
+      35
     );
-
-  }
-
-
-  const zeroY =
-    y(
-      0
-    );
-
-
-  ctx.strokeStyle =
-    "rgba(242,199,92,.22)";
-
-
-  ctx.beginPath();
-
-
-  ctx.moveTo(
-    padding.left,
-    zeroY
-  );
-
-
-  ctx.lineTo(
-    padding.left +
-    plotWidth,
-    zeroY
-  );
-
-
-  ctx.stroke();
-
-
-  if (
-    values.length <
-    2
-  ) {
 
     return;
 
   }
 
 
+  const padding = 26;
+
+
+  const values =
+    curve.map(
+      p =>
+        Number(
+          p.equity
+        )
+    );
+
+
+  let min =
+    Math.min(
+      ...values
+    );
+
+
+  let max =
+    Math.max(
+      ...values
+    );
+
+
+  if (
+    min === max
+  ) {
+
+    min -= 1;
+
+    max += 1;
+
+  }
+
+
+  /*
+   * Grid
+   */
+
   ctx.strokeStyle =
-    "#f2c75c";
+    "rgba(255,255,255,.055)";
 
 
-  ctx.lineWidth =
-    2;
+  ctx.lineWidth = 1;
+
+
+  for (
+    let i = 1;
+    i <= 4;
+    i++
+  ) {
+
+    const y =
+      padding +
+      (
+        (
+          height -
+          padding * 2
+        ) /
+        4
+      ) *
+      i;
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      padding,
+      y
+    );
+
+    ctx.lineTo(
+      width -
+      padding,
+      y
+    );
+
+    ctx.stroke();
+
+  }
+
+
+  /*
+   * Equity line
+   */
+
+  const gradient =
+    ctx.createLinearGradient(
+      padding,
+      0,
+      width -
+      padding,
+      0
+    );
+
+
+  gradient.addColorStop(
+    0,
+    "#62a9ff"
+  );
+
+
+  gradient.addColorStop(
+    .55,
+    "#52d8da"
+  );
+
+
+  gradient.addColorStop(
+    1,
+    "#48db8b"
+  );
+
+
+  ctx.strokeStyle =
+    gradient;
+
+
+  ctx.lineWidth = 2.3;
 
 
   ctx.beginPath();
 
 
-  values.forEach(
+  curve.forEach(
     (
-      value,
+      point,
       index
     ) => {
+
+      const x =
+        padding +
+        (
+          index /
+          (
+            curve.length -
+            1
+          )
+        ) *
+        (
+          width -
+          padding * 2
+        );
+
+
+      const y =
+        height -
+        padding -
+        (
+          (
+            point.equity -
+            min
+          ) /
+          (
+            max -
+            min
+          )
+        ) *
+        (
+          height -
+          padding * 2
+        );
+
 
       if (
         index === 0
       ) {
 
         ctx.moveTo(
-          x(index),
-          y(value)
+          x,
+          y
         );
 
       } else {
 
         ctx.lineTo(
-          x(index),
-          y(value)
+          x,
+          y
         );
 
       }
@@ -2021,45 +2997,50 @@ function drawEquity(
   ctx.stroke();
 
 
+  /*
+   * Labels
+   */
+
   ctx.fillStyle =
-    "#f2c75c";
+    "#8b9ab0";
 
 
-  ctx.beginPath();
+  ctx.font =
+    "11px -apple-system";
 
 
-  ctx.arc(
-    x(
-      values.length -
-      1
+  ctx.fillText(
+    max.toLocaleString(
+      undefined,
+      {
+        maximumFractionDigits: 0
+      }
     ),
-    y(
-      lastValue(
-        values
-      )
-    ),
-    3,
-    0,
-    Math.PI *
-    2
+    8,
+    18
   );
 
 
-  ctx.fill();
+  ctx.fillText(
+    min.toLocaleString(
+      undefined,
+      {
+        maximumFractionDigits: 0
+      }
+    ),
+    8,
+    height - 10
+  );
 
 }
 
 
-function lastValue(
-  array
-) {
+/* =========================================================
+   RESIZE
+========================================================= */
 
-  return array[
-    array.length -
-    1
-  ];
-
-}
+let lastData =
+  null;
 
 
 window.addEventListener(
@@ -2067,29 +3048,55 @@ window.addEventListener(
   () => {
 
     if (
-      LAST_DATA
+      lastData?.custom?.metrics
+        ?.equityCurve
     ) {
 
-      clearTimeout(
-        window.__resizeTimer
+      drawEquity(
+        lastData.custom.metrics
+          .equityCurve
       );
-
-
-      window.__resizeTimer =
-        setTimeout(
-          () =>
-            drawEquity(
-              LAST_DATA.trades
-            ),
-          100
-        );
 
     }
 
   }
 );
 
+
+/* =========================================================
+   WRAP RENDER FOR RESIZE CACHE
+========================================================= */
+
+const originalRenderAll =
+  renderAll;
+
+
+renderAll =
+  function(data) {
+
+    lastData =
+      data;
+
+    originalRenderAll(data);
+
+  };
+
+
+/* =========================================================
+   AUTO START
+========================================================= */
+
+window.addEventListener(
+  "load",
+  () => {
+
+    runBacktest();
+
+  }
+);
+
 </script>
+
 
 </body>
 
