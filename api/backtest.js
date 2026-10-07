@@ -1,75 +1,77 @@
 /* ================================================================
    TYSON TRADE AI
-   TREND PULLBACK V1.3
-   ROBUST WALK-FORWARD BACKTEST ENGINE
-
-   FILE
-   ----
+   REGIME PULLBACK V1.4
+   ---------------------------------------------------------------
    /api/backtest.js
 
    MARKET
    ------
    XAU/USD
 
-   PROVIDER
-   --------
-   Twelve Data
+   DATA
+   ----
+   Twelve Data M5
 
-   ENVIRONMENT VARIABLES
-   ---------------------
+   HIGHER TIMEFRAMES
+   -----------------
+   M15 / H1 / H4 are built locally from M5.
+
+   ENVIRONMENT
+   -----------
    TWELVE_DATA_API_KEY_4
 
    FALLBACK
    --------
    TWELVE_DATA_API_KEY
 
-   DATA ARCHITECTURE
-   -----------------
-   Download M5 history.
-   Build M15 / H1 / H4 locally from M5.
-
-   BENEFITS
-   --------
-   - Same underlying feed
-   - Exact timestamp synchronization
-   - Lower API usage
-   - No HTF data mismatch
-   - Easier long-history testing
-
-   BACKTEST
-   --------
-   First 70%  = development
-   Last 30%   = untouched validation
-
-   IMPORTANT
+   CORE IDEA
    ---------
-   Mode selection uses DEVELOPMENT DATA ONLY.
+   H4 = macro EMA regime
+   H1 = primary trend + regime strength
+   M15 = local trend + acceleration
+   M5 = pullback + continuation trigger
 
-   Validation performance is NEVER used to select the best mode.
+   INDICATORS
+   ----------
+   EMA20
+   EMA50
+   EMA200
+   RSI14
+   ATR14
+   ADX14
+
+   V1.4 IMPROVEMENTS
+   -----------------
+   - Extended history
+   - Development-only model selection
+   - Hard positive-edge requirement
+   - Regime-quality filtering
+   - EMA separation normalized by ATR
+   - H1 + M15 ADX filtering
+   - ADX acceleration filtering
+   - BUY / SELL breakdown
+   - 4 chronological stability windows
+   - Untouched 30% validation
+   - No deployment when development edge is negative
+   - Actual target R explicitly returned
 
    ENTRY
    -----
-   Signal on completed M5 candle.
-   Entry on NEXT M5 open.
+   Signal is evaluated on completed M5 candle.
+   Trade enters NEXT M5 open.
 
-   EXIT
-   ----
-   Structural + ATR stop.
-   Default target = 1.8R.
-   Breakeven after +1R.
+   SAME BAR COLLISION
+   ------------------
+   SL first.
 
-   COST
-   ----
-   Default trading cost = 0.04R per trade.
-
-   DISCLAIMER
-   ----------
-   Historical performance does not guarantee future profitability.
+   IMPORTANT
+   ---------
+   Historical results do not guarantee future performance.
 ================================================================ */
 
 
 /* ================================================================
-   CONFIG
+   GLOBAL CONFIG
 ================================================================ */
 
 const TD_KEY =
@@ -91,9 +93,6 @@ const M5_MS =
 
 const TF_MS = {
 
-  m5:
-    5 * 60 * 1000,
-
   m15:
     15 * 60 * 1000,
 
@@ -106,19 +105,35 @@ const TF_MS = {
 };
 
 
+/*
+ * Twelve Data normally allows a maximum
+ * output size around this region.
+ */
+
 const CHUNK_SIZE =
   5000;
 
 
+/*
+ * 8 x 5000 gives enough room for:
+ *
+ * evaluation history
+ * +
+ * H4 EMA200 warm-up.
+ */
+
 const MAX_CHUNKS =
-  6;
+  8;
 
 
 /*
- * H4 EMA200 requires roughly
- * 200 * 48 = 9600 M5 bars.
+ * H4 EMA200:
  *
- * Give it some safety margin.
+ * 200 H4 candles
+ * x 48 M5 candles
+ * = 9600 M5 bars.
+ *
+ * Add safety margin.
  */
 
 const WARMUP_M5_BARS =
@@ -126,7 +141,7 @@ const WARMUP_M5_BARS =
 
 
 /* ================================================================
-   BASIC HELPERS
+   HELPERS
 ================================================================ */
 
 function clamp(
@@ -195,10 +210,31 @@ function numberParam(
   max
 ) {
 
+  const raw =
+    first(value);
+
+
+  /*
+   * Important:
+   * Number("") = 0 in JS.
+   *
+   * We do NOT want blank form fields
+   * silently becoming zero.
+   */
+
+  if (
+    raw === undefined ||
+    raw === null ||
+    raw === ""
+  ) {
+
+    return fallback;
+
+  }
+
+
   const n =
-    Number(
-      first(value)
-    );
+    Number(raw);
 
 
   if (
@@ -251,7 +287,8 @@ function boolParam(
 
   if (
     raw === undefined ||
-    raw === null
+    raw === null ||
+    raw === ""
   ) {
 
     return fallback;
@@ -268,7 +305,7 @@ function boolParam(
 
 
 /* ================================================================
-   DATETIME
+   DATE
 ================================================================ */
 
 function parseDate(value) {
@@ -287,7 +324,7 @@ function parseDate(value) {
         );
 
 
-  const ts =
+  const timestamp =
     Date.parse(
 
       normalized.endsWith("Z")
@@ -297,8 +334,8 @@ function parseDate(value) {
     );
 
 
-  return Number.isFinite(ts)
-    ? ts
+  return Number.isFinite(timestamp)
+    ? timestamp
     : null;
 
 }
@@ -416,7 +453,7 @@ function atr(
   length = 14
 ) {
 
-  const trueRange =
+  const tr =
     new Array(
       candles.length
     ).fill(null);
@@ -436,7 +473,7 @@ function atr(
       i === 0
     ) {
 
-      trueRange[i] =
+      tr[i] =
         candle.high -
         candle.low;
 
@@ -451,7 +488,7 @@ function atr(
       ].close;
 
 
-    trueRange[i] =
+    tr[i] =
       Math.max(
 
         candle.high -
@@ -498,7 +535,7 @@ function atr(
   ) {
 
     seed +=
-      trueRange[i];
+      tr[i];
 
   }
 
@@ -524,7 +561,7 @@ function atr(
           (
             length - 1
           ) +
-        trueRange[i]
+        tr[i]
       ) /
       length;
 
@@ -713,24 +750,6 @@ function adx(
     ).fill(null);
 
 
-  const tr =
-    new Array(
-      size
-    ).fill(0);
-
-
-  const plusDM =
-    new Array(
-      size
-    ).fill(0);
-
-
-  const minusDM =
-    new Array(
-      size
-    ).fill(0);
-
-
   if (
     size <
     length * 2 + 2
@@ -739,6 +758,21 @@ function adx(
     return output;
 
   }
+
+
+  const tr =
+    new Array(size)
+      .fill(0);
+
+
+  const plusDM =
+    new Array(size)
+      .fill(0);
+
+
+  const minusDM =
+    new Array(size)
+      .fill(0);
 
 
   for (
@@ -834,9 +868,8 @@ function adx(
 
 
   const dx =
-    new Array(
-      size
-    ).fill(null);
+    new Array(size)
+      .fill(null);
 
 
   for (
@@ -983,7 +1016,7 @@ function adx(
 
 
 /* ================================================================
-   TWELVE DATA PAGE
+   FETCH M5 PAGE
 ================================================================ */
 
 async function fetchM5Page(
@@ -1097,7 +1130,7 @@ async function fetchM5Page(
   ) {
 
     throw new Error(
-      "No M5 candles returned."
+      "No M5 candle data returned."
     );
 
   }
@@ -1164,8 +1197,11 @@ async function fetchM5Page(
             M5_MS,
 
           open,
+
           high,
+
           low,
+
           close
 
         };
@@ -1176,8 +1212,9 @@ async function fetchM5Page(
     .filter(Boolean)
 
     /*
-     * Do not include the live M5 candle.
+     * Remove incomplete live candle.
      */
+
     .filter(
       candle =>
         candle.closeTs <=
@@ -1197,7 +1234,7 @@ async function fetchM5Page(
 
 
 /* ================================================================
-   PAGINATED M5 HISTORY
+   FETCH EXTENDED HISTORY
 ================================================================ */
 
 async function fetchM5History(
@@ -1222,13 +1259,13 @@ async function fetchM5History(
     chunk++
   ) {
 
-    const stillNeeded =
+    const remaining =
       targetBars -
       all.length;
 
 
     if (
-      stillNeeded <= 0
+      remaining <= 0
     ) {
 
       break;
@@ -1236,19 +1273,22 @@ async function fetchM5History(
     }
 
 
-    const requestSize =
+    const outputsize =
       Math.min(
+
         CHUNK_SIZE,
+
         Math.max(
           500,
-          stillNeeded
+          remaining
         )
+
       );
 
 
     const page =
       await fetchM5Page(
-        requestSize,
+        outputsize,
         endDate
       );
 
@@ -1271,11 +1311,6 @@ async function fetchM5History(
       page[0].ts;
 
 
-    /*
-     * Protect against API returning
-     * the same page repeatedly.
-     */
-
     if (
       previousOldest !== null &&
       oldest >=
@@ -1291,11 +1326,6 @@ async function fetchM5History(
       oldest;
 
 
-    /*
-     * Ask for data before
-     * the oldest candle returned.
-     */
-
     endDate =
       oldest -
       1000;
@@ -1304,7 +1334,7 @@ async function fetchM5History(
 
 
   /*
-   * Deduplicate.
+   * Deduplicate candles.
    */
 
   const map =
@@ -1338,10 +1368,6 @@ async function fetchM5History(
       );
 
 
-  /*
-   * Keep latest requested amount.
-   */
-
   if (
     candles.length >
     targetBars
@@ -1361,22 +1387,13 @@ async function fetchM5History(
 
 
 /* ================================================================
-   AGGREGATE M5 -> HIGHER TIMEFRAMES
+   AGGREGATE HIGHER TIMEFRAME
 ================================================================ */
 
 function aggregateCandles(
   source,
   timeframeMs
 ) {
-
-  if (
-    !source.length
-  ) {
-
-    return [];
-
-  }
-
 
   const buckets =
     new Map();
@@ -1435,6 +1452,7 @@ function aggregateCandles(
         bar
       );
 
+
       continue;
 
     }
@@ -1463,7 +1481,7 @@ function aggregateCandles(
   }
 
 
-  const output =
+  const result =
     Array.from(
       buckets.values()
     )
@@ -1478,28 +1496,28 @@ function aggregateCandles(
 
 
   /*
-   * The first bucket may be incomplete
-   * because downloaded history can begin
-   * part way through an HTF candle.
+   * First aggregate candle may be partial
+   * because historical download may start
+   * midway through the HTF candle.
    */
 
   if (
-    output.length >
+    result.length >
     1
   ) {
 
-    output.shift();
+    result.shift();
 
   }
 
 
-  return output;
+  return result;
 
 }
 
 
 /* ================================================================
-   DECORATE CANDLES
+   DECORATE SERIES
 ================================================================ */
 
 function decorate(
@@ -1513,42 +1531,42 @@ function decorate(
     );
 
 
-  const ema20 =
+  const e20 =
     ema(
       closes,
       20
     );
 
 
-  const ema50 =
+  const e50 =
     ema(
       closes,
       50
     );
 
 
-  const ema200 =
+  const e200 =
     ema(
       closes,
       200
     );
 
 
-  const atr14 =
+  const a14 =
     atr(
       candles,
       14
     );
 
 
-  const rsi14 =
+  const r14 =
     rsi(
       closes,
       14
     );
 
 
-  const adx14 =
+  const x14 =
     adx(
       candles,
       14
@@ -1561,19 +1579,23 @@ function decorate(
       index
     ) => {
 
+      const atrValue =
+        a14[index];
+
+
       const slope20 =
         index > 0 &&
         Number.isFinite(
-          ema20[index]
+          e20[index]
         ) &&
         Number.isFinite(
-          ema20[
+          e20[
             index - 1
           ]
         )
           ? (
-              ema20[index] -
-              ema20[
+              e20[index] -
+              e20[
                 index - 1
               ]
             )
@@ -1583,18 +1605,79 @@ function decorate(
       const slope50 =
         index > 0 &&
         Number.isFinite(
-          ema50[index]
+          e50[index]
         ) &&
         Number.isFinite(
-          ema50[
+          e50[
             index - 1
           ]
         )
           ? (
-              ema50[index] -
-              ema50[
+              e50[index] -
+              e50[
                 index - 1
               ]
+            )
+          : null;
+
+
+      const adxDelta =
+        index > 0 &&
+        Number.isFinite(
+          x14[index]
+        ) &&
+        Number.isFinite(
+          x14[
+            index - 1
+          ]
+        )
+          ? (
+              x14[index] -
+              x14[
+                index - 1
+              ]
+            )
+          : null;
+
+
+      const gap2050ATR =
+        Number.isFinite(
+          atrValue
+        ) &&
+        atrValue > 0 &&
+        Number.isFinite(
+          e20[index]
+        ) &&
+        Number.isFinite(
+          e50[index]
+        )
+          ? (
+              Math.abs(
+                e20[index] -
+                e50[index]
+              ) /
+              atrValue
+            )
+          : null;
+
+
+      const gap50200ATR =
+        Number.isFinite(
+          atrValue
+        ) &&
+        atrValue > 0 &&
+        Number.isFinite(
+          e50[index]
+        ) &&
+        Number.isFinite(
+          e200[index]
+        )
+          ? (
+              Math.abs(
+                e50[index] -
+                e200[index]
+              ) /
+              atrValue
             )
           : null;
 
@@ -1604,26 +1687,32 @@ function decorate(
         ...candle,
 
         ema20:
-          ema20[index],
+          e20[index],
 
         ema50:
-          ema50[index],
+          e50[index],
 
         ema200:
-          ema200[index],
+          e200[index],
 
         atr14:
-          atr14[index],
+          a14[index],
 
         rsi14:
-          rsi14[index],
+          r14[index],
 
         adx14:
-          adx14[index],
+          x14[index],
 
         slope20,
 
-        slope50
+        slope50,
+
+        adxDelta,
+
+        gap2050ATR,
+
+        gap50200ATR
 
       };
 
@@ -1634,54 +1723,48 @@ function decorate(
 
 
 /* ================================================================
-   BUILD ALL TIMEFRAMES
+   BUILD DATA
 ================================================================ */
 
 function buildData(
-  rawM5
+  m5
 ) {
-
-  const rawM15 =
-    aggregateCandles(
-      rawM5,
-      TF_MS.m15
-    );
-
-
-  const rawH1 =
-    aggregateCandles(
-      rawM5,
-      TF_MS.h1
-    );
-
-
-  const rawH4 =
-    aggregateCandles(
-      rawM5,
-      TF_MS.h4
-    );
-
 
   return {
 
     m5:
       decorate(
-        rawM5
+        m5
       ),
 
     m15:
       decorate(
-        rawM15
+
+        aggregateCandles(
+          m5,
+          TF_MS.m15
+        )
+
       ),
 
     h1:
       decorate(
-        rawH1
+
+        aggregateCandles(
+          m5,
+          TF_MS.h1
+        )
+
       ),
 
     h4:
       decorate(
-        rawH4
+
+        aggregateCandles(
+          m5,
+          TF_MS.h4
+        )
+
       )
 
   };
@@ -1690,7 +1773,7 @@ function buildData(
 
 
 /* ================================================================
-   COMPLETED HTF LOOKUP
+   COMPLETED BAR INDEX
 ================================================================ */
 
 function completedIndex(
@@ -1732,6 +1815,7 @@ function completedIndex(
 
       result =
         middle;
+
 
       left =
         middle +
@@ -1826,7 +1910,13 @@ function getContext(
     h4:
       data.h4[
         h4Index
-      ]
+      ],
+
+    m15Index,
+
+    h1Index,
+
+    h4Index
 
   };
 
@@ -1884,7 +1974,7 @@ function validContext(
 
 
 /* ================================================================
-   FIRST VALID M5 INDEX
+   FIRST VALID INDEX
 ================================================================ */
 
 function firstValidIndex(
@@ -1923,7 +2013,7 @@ function firstValidIndex(
 
 
 /* ================================================================
-   TREND CONDITIONS
+   TREND STATES
 ================================================================ */
 
 function h4Bull(c) {
@@ -2035,7 +2125,166 @@ function m5Bear(c) {
 
 
 /* ================================================================
-   BODY
+   REGIME QUALITY
+================================================================ */
+
+function regimeQuality(
+  context,
+  side,
+  settings
+) {
+
+  if (
+    !Number.isFinite(
+      context.h1.adx14
+    ) ||
+    !Number.isFinite(
+      context.m15.adx14
+    ) ||
+    !Number.isFinite(
+      context.h1.gap2050ATR
+    ) ||
+    !Number.isFinite(
+      context.m15.gap2050ATR
+    ) ||
+    !Number.isFinite(
+      context.h4.gap50200ATR
+    )
+  ) {
+
+    return false;
+
+  }
+
+
+  /*
+   * Direction.
+   */
+
+  if (
+    side === 1
+  ) {
+
+    if (
+      !h4Bull(
+        context.h4
+      ) ||
+      !h1Bull(
+        context.h1
+      ) ||
+      !m15Bull(
+        context.m15
+      )
+    ) {
+
+      return false;
+
+    }
+
+  } else {
+
+    if (
+      !h4Bear(
+        context.h4
+      ) ||
+      !h1Bear(
+        context.h1
+      ) ||
+      !m15Bear(
+        context.m15
+      )
+    ) {
+
+      return false;
+
+    }
+
+  }
+
+
+  /*
+   * Trend strength.
+   */
+
+  if (
+    context.h1.adx14 <
+    settings.minH1ADX
+  ) {
+
+    return false;
+
+  }
+
+
+  if (
+    context.m15.adx14 <
+    settings.minM15ADX
+  ) {
+
+    return false;
+
+  }
+
+
+  /*
+   * EMA separation.
+   */
+
+  if (
+    context.h1.gap2050ATR <
+    settings.minH1GapATR
+  ) {
+
+    return false;
+
+  }
+
+
+  if (
+    context.m15.gap2050ATR <
+    settings.minM15GapATR
+  ) {
+
+    return false;
+
+  }
+
+
+  if (
+    context.h4.gap50200ATR <
+    settings.minH4GapATR
+  ) {
+
+    return false;
+
+  }
+
+
+  /*
+   * Avoid heavily deteriorating
+   * local trend strength.
+   */
+
+  if (
+    Number.isFinite(
+      context.m15.adxDelta
+    ) &&
+    context.m15.adxDelta <
+    settings.minM15AdxDelta
+  ) {
+
+    return false;
+
+  }
+
+
+  return true;
+
+}
+
+
+/* ================================================================
+   CANDLE BODY
 ================================================================ */
 
 function bodyRatio(
@@ -2170,7 +2419,7 @@ function recentPullback(
         tolerance;
 
 
-      const depthOkay =
+      const notTooDeep =
         candle.low >=
         candle.ema50 -
         candle.atr14 *
@@ -2179,7 +2428,7 @@ function recentPullback(
 
       if (
         touched &&
-        depthOkay
+        notTooDeep
       ) {
 
         return true;
@@ -2194,7 +2443,7 @@ function recentPullback(
         tolerance;
 
 
-      const depthOkay =
+      const notTooDeep =
         candle.high <=
         candle.ema50 +
         candle.atr14 *
@@ -2203,7 +2452,7 @@ function recentPullback(
 
       if (
         touched &&
-        depthOkay
+        notTooDeep
       ) {
 
         return true;
@@ -2216,160 +2465,6 @@ function recentPullback(
 
 
   return false;
-
-}
-
-
-/* ================================================================
-   SETUP SCORE
-================================================================ */
-
-function setupScore(
-  context,
-  side,
-  settings
-) {
-
-  let score = 0;
-
-
-  /*
-   * Macro regime
-   * 25
-   */
-
-  if (
-    side === 1
-      ? h4Bull(
-          context.h4
-        )
-      : h4Bear(
-          context.h4
-        )
-  ) {
-
-    score +=
-      25;
-
-  }
-
-
-  /*
-   * Primary trend
-   * 25
-   */
-
-  if (
-    side === 1
-      ? h1Bull(
-          context.h1
-        )
-      : h1Bear(
-          context.h1
-        )
-  ) {
-
-    score +=
-      25;
-
-  }
-
-
-  /*
-   * Local trend
-   * 20
-   */
-
-  if (
-    side === 1
-      ? m15Bull(
-          context.m15
-        )
-      : m15Bear(
-          context.m15
-        )
-  ) {
-
-    score +=
-      20;
-
-  }
-
-
-  /*
-   * Trend strength
-   * 10
-   */
-
-  if (
-    Number.isFinite(
-      context.m15.adx14
-    ) &&
-    context.m15.adx14 >=
-      settings.minADX
-  ) {
-
-    score +=
-      10;
-
-  }
-
-
-  /*
-   * Execution trend
-   * 10
-   */
-
-  if (
-    side === 1
-      ? m5Bull(
-          context.m5
-        )
-      : m5Bear(
-          context.m5
-        )
-  ) {
-
-    score +=
-      10;
-
-  }
-
-
-  /*
-   * Slope agreement
-   * 10
-   */
-
-  if (
-    side === 1 &&
-    context.h1.slope20 >
-      0 &&
-    context.m15.slope20 >
-      0
-  ) {
-
-    score +=
-      10;
-
-  }
-
-
-  if (
-    side === -1 &&
-    context.h1.slope20 <
-      0 &&
-    context.m15.slope20 <
-      0
-  ) {
-
-    score +=
-      10;
-
-  }
-
-
-  return score;
 
 }
 
@@ -2410,7 +2505,7 @@ function continuationPass(
       previous.high;
 
 
-    const strongContinuation =
+    const momentumClose =
       current.close >
         previous.close &&
       current.close >
@@ -2423,7 +2518,7 @@ function continuationPass(
 
     return (
       strictBreak ||
-      strongContinuation
+      momentumClose
     );
 
   }
@@ -2434,7 +2529,7 @@ function continuationPass(
     previous.low;
 
 
-  const strongContinuation =
+  const momentumClose =
     current.close <
       previous.close &&
     current.close <
@@ -2447,8 +2542,136 @@ function continuationPass(
 
   return (
     strictBreak ||
-    strongContinuation
+    momentumClose
   );
+
+}
+
+
+/* ================================================================
+   SCORE
+================================================================ */
+
+function setupScore(
+  context,
+  side,
+  settings
+) {
+
+  let score = 0;
+
+
+  if (
+    side === 1
+      ? h4Bull(
+          context.h4
+        )
+      : h4Bear(
+          context.h4
+        )
+  ) {
+
+    score += 20;
+
+  }
+
+
+  if (
+    side === 1
+      ? h1Bull(
+          context.h1
+        )
+      : h1Bear(
+          context.h1
+        )
+  ) {
+
+    score += 20;
+
+  }
+
+
+  if (
+    side === 1
+      ? m15Bull(
+          context.m15
+        )
+      : m15Bear(
+          context.m15
+        )
+  ) {
+
+    score += 15;
+
+  }
+
+
+  if (
+    side === 1
+      ? m5Bull(
+          context.m5
+        )
+      : m5Bear(
+          context.m5
+        )
+  ) {
+
+    score += 10;
+
+  }
+
+
+  if (
+    context.h1.adx14 >=
+    settings.minH1ADX
+  ) {
+
+    score += 10;
+
+  }
+
+
+  if (
+    context.m15.adx14 >=
+    settings.minM15ADX
+  ) {
+
+    score += 10;
+
+  }
+
+
+  if (
+    context.h1.gap2050ATR >=
+    settings.minH1GapATR
+  ) {
+
+    score += 5;
+
+  }
+
+
+  if (
+    context.m15.gap2050ATR >=
+    settings.minM15GapATR
+  ) {
+
+    score += 5;
+
+  }
+
+
+  if (
+    context.h4.gap50200ATR >=
+    settings.minH4GapATR
+  ) {
+
+    score += 5;
+
+  }
+
+
+  return score;
 
 }
 
@@ -2506,9 +2729,6 @@ function getSignal(
     ) ||
     !Number.isFinite(
       current.rsi14
-    ) ||
-    !Number.isFinite(
-      context.m15.adx14
     )
   ) {
 
@@ -2540,7 +2760,7 @@ function getSignal(
 
 
   /*
-   * Volatility.
+   * Minimum M5 volatility.
    */
 
   const atrPct =
@@ -2562,18 +2782,14 @@ function getSignal(
 
 
   /* ============================================================
-     LONG
+     BUY
   ============================================================ */
 
   if (
-    h4Bull(
-      context.h4
-    ) &&
-    h1Bull(
-      context.h1
-    ) &&
-    m15Bull(
-      context.m15
+    regimeQuality(
+      context,
+      1,
+      settings
     )
   ) {
 
@@ -2587,10 +2803,15 @@ function getSignal(
 
     const pullback =
       recentPullback(
+
         data.m5,
+
         index,
+
         1,
+
         settings
+
       );
 
 
@@ -2615,7 +2836,7 @@ function getSignal(
       );
 
 
-    const chase =
+    const chaseATR =
       Math.abs(
         current.close -
         current.ema20
@@ -2629,7 +2850,7 @@ function getSignal(
       pullback &&
       rsiOkay &&
       continuation &&
-      chase <=
+      chaseATR <=
         settings.maxChaseATR
     ) {
 
@@ -2649,18 +2870,14 @@ function getSignal(
 
 
   /* ============================================================
-     SHORT
+     SELL
   ============================================================ */
 
   if (
-    h4Bear(
-      context.h4
-    ) &&
-    h1Bear(
-      context.h1
-    ) &&
-    m15Bear(
-      context.m15
+    regimeQuality(
+      context,
+      -1,
+      settings
     )
   ) {
 
@@ -2674,10 +2891,15 @@ function getSignal(
 
     const pullback =
       recentPullback(
+
         data.m5,
+
         index,
+
         -1,
+
         settings
+
       );
 
 
@@ -2702,7 +2924,7 @@ function getSignal(
       );
 
 
-    const chase =
+    const chaseATR =
       Math.abs(
         current.close -
         current.ema20
@@ -2716,7 +2938,7 @@ function getSignal(
       pullback &&
       rsiOkay &&
       continuation &&
-      chase <=
+      chaseATR <=
         settings.maxChaseATR
     ) {
 
@@ -2741,7 +2963,7 @@ function getSignal(
 
 
 /* ================================================================
-   STRUCTURAL STOP
+   STOP
 ================================================================ */
 
 function calculateStop(
@@ -2781,10 +3003,6 @@ function calculateStop(
       1
     );
 
-
-  /* ============================================================
-     BUY
-  ============================================================ */
 
   if (
     side === 1
@@ -2867,10 +3085,6 @@ function calculateStop(
   }
 
 
-  /* ============================================================
-     SELL
-  ============================================================ */
-
   let swingHigh =
     -Infinity;
 
@@ -2949,7 +3163,7 @@ function calculateStop(
 
 
 /* ================================================================
-   TRADE SIMULATION
+   SIMULATE TRADE
 ================================================================ */
 
 function simulateTrade(
@@ -3025,7 +3239,7 @@ function simulateTrade(
         settings.targetR;
 
 
-  const breakevenTrigger =
+  const beTrigger =
     signal.side === 1
       ? entry +
         riskDistance *
@@ -3039,11 +3253,11 @@ function simulateTrade(
     originalStop;
 
 
-  let breakevenActive =
+  let beActive =
     false;
 
 
-  const finalIndex =
+  const lastIndex =
     Math.min(
 
       data.m5.length -
@@ -3056,12 +3270,12 @@ function simulateTrade(
 
 
   let exitIndex =
-    finalIndex;
+    lastIndex;
 
 
   let exitPrice =
     data.m5[
-      finalIndex
+      lastIndex
     ].close;
 
 
@@ -3075,7 +3289,7 @@ function simulateTrade(
 
   for (
     let i = entryIndex;
-    i <= finalIndex;
+    i <= lastIndex;
     i++
   ) {
 
@@ -3083,9 +3297,7 @@ function simulateTrade(
       data.m5[i];
 
 
-    /* ============================================================
-       LONG
-    ============================================================ */
+    /* BUY */
 
     if (
       signal.side === 1
@@ -3101,13 +3313,6 @@ function simulateTrade(
         target;
 
 
-      /*
-       * Conservative ordering.
-       *
-       * If both are reached within
-       * one M5 candle, assume SL first.
-       */
-
       if (
         stopHit
       ) {
@@ -3121,13 +3326,13 @@ function simulateTrade(
 
 
         rawR =
-          breakevenActive
+          beActive
             ? 0
             : -1;
 
 
         result =
-          breakevenActive
+          beActive
             ? "BE"
             : "SL";
 
@@ -3162,19 +3367,14 @@ function simulateTrade(
       }
 
 
-      /*
-       * Breakeven becomes active
-       * for subsequent candles.
-       */
-
       if (
         settings.useBreakeven &&
-        !breakevenActive &&
+        !beActive &&
         bar.high >=
-          breakevenTrigger
+          beTrigger
       ) {
 
-        breakevenActive =
+        beActive =
           true;
 
 
@@ -3186,9 +3386,7 @@ function simulateTrade(
     }
 
 
-    /* ============================================================
-       SHORT
-    ============================================================ */
+    /* SELL */
 
     else {
 
@@ -3215,13 +3413,13 @@ function simulateTrade(
 
 
         rawR =
-          breakevenActive
+          beActive
             ? 0
             : -1;
 
 
         result =
-          breakevenActive
+          beActive
             ? "BE"
             : "SL";
 
@@ -3258,12 +3456,12 @@ function simulateTrade(
 
       if (
         settings.useBreakeven &&
-        !breakevenActive &&
+        !beActive &&
         bar.low <=
-          breakevenTrigger
+          beTrigger
       ) {
 
-        breakevenActive =
+        beActive =
           true;
 
 
@@ -3276,10 +3474,6 @@ function simulateTrade(
 
   }
 
-
-  /*
-   * Time-based close.
-   */
 
   if (
     rawR === null
@@ -3315,8 +3509,6 @@ function simulateTrade(
 
     score:
       signal.score,
-
-    signalIndex,
 
     entryIndex,
 
@@ -3365,12 +3557,6 @@ function simulateTrade(
         4
       ),
 
-    riskDistance:
-      round(
-        riskDistance,
-        4
-      ),
-
     rawR:
       round(
         rawR,
@@ -3402,7 +3588,7 @@ function simulateTrade(
 function calculateMetrics(
   trades,
   settings,
-  includeCurve = true
+  includeCurve = false
 ) {
 
   let wins = 0;
@@ -3416,9 +3602,9 @@ function calculateMetrics(
   let sells = 0;
 
 
-  let grossProfitR = 0;
+  let grossProfit = 0;
 
-  let grossLossR = 0;
+  let grossLoss = 0;
 
   let totalR = 0;
 
@@ -3435,7 +3621,7 @@ function calculateMetrics(
     0;
 
 
-  const equityCurve =
+  const curve =
     includeCurve
       ? [
           {
@@ -3483,10 +3669,6 @@ function calculateMetrics(
     }
 
 
-    /*
-     * Trade classifications.
-     */
-
     if (
       trade.result ===
       "BE"
@@ -3507,34 +3689,22 @@ function calculateMetrics(
     }
 
 
-    /*
-     * PF includes all real costs.
-     *
-     * Therefore a BE trade with
-     * -0.04R cost still contributes
-     * to gross loss.
-     */
-
     if (
       r > 0
     ) {
 
-      grossProfitR +=
+      grossProfit +=
         r;
 
     } else if (
       r < 0
     ) {
 
-      grossLossR +=
+      grossLoss +=
         Math.abs(r);
 
     }
 
-
-    /*
-     * Fixed fractional equity.
-     */
 
     equity *=
       1 +
@@ -3552,7 +3722,7 @@ function calculateMetrics(
       );
 
 
-    const drawdown =
+    const dd =
       peak > 0
         ? (
             (
@@ -3568,7 +3738,7 @@ function calculateMetrics(
     maxDrawdown =
       Math.max(
         maxDrawdown,
-        drawdown
+        dd
       );
 
 
@@ -3576,7 +3746,7 @@ function calculateMetrics(
       includeCurve
     ) {
 
-      equityCurve.push({
+      curve.push({
 
         trade:
           i + 1,
@@ -3609,10 +3779,10 @@ function calculateMetrics(
 
 
   const profitFactor =
-    grossLossR > 0
-      ? grossProfitR /
-        grossLossR
-      : grossProfitR > 0
+    grossLoss > 0
+      ? grossProfit /
+        grossLoss
+      : grossProfit > 0
         ? 99
         : 0;
 
@@ -3682,12 +3852,6 @@ function calculateMetrics(
         2
       ),
 
-    initialBalance:
-      round(
-        settings.initialBalance,
-        2
-      ),
-
     finalBalance:
       round(
         equity,
@@ -3700,7 +3864,8 @@ function calculateMetrics(
         2
       ),
 
-    equityCurve
+    equityCurve:
+      curve
 
   };
 
@@ -3708,196 +3873,158 @@ function calculateMetrics(
 
 
 /* ================================================================
-   SUMMARY WITHOUT CURVE
+   FOUR WINDOW STABILITY TEST
 ================================================================ */
 
-function compactMetrics(
+function stabilityWindows(
+  trades,
+  startTime,
+  endTime,
+  settings
+) {
+
+  const windows = [];
+
+
+  const duration =
+    (
+      endTime -
+      startTime
+    ) /
+    4;
+
+
+  let positiveWindows =
+    0;
+
+
+  for (
+    let i = 0;
+    i < 4;
+    i++
+  ) {
+
+    const windowStart =
+      startTime +
+      duration *
+      i;
+
+
+    const windowEnd =
+      i === 3
+        ? endTime +
+          1
+        : startTime +
+          duration *
+          (
+            i + 1
+          );
+
+
+    const windowTrades =
+      trades.filter(
+        trade => {
+
+          const time =
+            Date.parse(
+              trade.entryTime
+            );
+
+
+          return (
+            time >=
+              windowStart &&
+            time <
+              windowEnd
+          );
+
+        }
+      );
+
+
+    const metrics =
+      calculateMetrics(
+        windowTrades,
+        settings,
+        false
+      );
+
+
+    if (
+      metrics.expectancyR >
+      0
+    ) {
+
+      positiveWindows++;
+
+    }
+
+
+    windows.push({
+
+      window:
+        i + 1,
+
+      start:
+        new Date(
+          windowStart
+        ).toISOString(),
+
+      end:
+        new Date(
+          windowEnd -
+          1
+        ).toISOString(),
+
+      metrics
+
+    });
+
+  }
+
+
+  return {
+
+    positiveWindows,
+
+    totalWindows: 4,
+
+    windows
+
+  };
+
+}
+
+
+/* ================================================================
+   DEVELOPMENT ELIGIBILITY
+================================================================ */
+
+function developmentEligible(
   metrics
 ) {
 
-  return {
+  return (
 
-    trades:
-      metrics.trades,
+    metrics.trades >=
+      20
 
-    wins:
-      metrics.wins,
+    &&
 
-    losses:
-      metrics.losses,
+    metrics.profitFactor >
+      1.05
 
-    breakevens:
-      metrics.breakevens,
+    &&
 
-    winRate:
-      metrics.winRate,
+    metrics.expectancyR >
+      0.02
 
-    profitFactor:
-      metrics.profitFactor,
+    &&
 
-    expectancyR:
-      metrics.expectancyR,
-
-    totalR:
-      metrics.totalR,
-
-    maxDrawdown:
-      metrics.maxDrawdown
-
-  };
-
-}
-
-
-/* ================================================================
-   STRATEGY GRADE
-================================================================ */
-
-function gradeStrategy(
-  overall,
-  validation,
-  direction
-) {
-
-  /*
-   * Small total sample.
-   */
-
-  if (
-    overall.trades <
-    30
-  ) {
-
-    return {
-
-      grade:
-        "N/A",
-
-      verdict:
-        "Not enough total trades yet"
-
-    };
-
-  }
-
-
-  /*
-   * Validation too small.
-   */
-
-  if (
-    validation.trades <
-    8
-  ) {
-
-    return {
-
-      grade:
-        "P",
-
-      verdict:
-        "Promising, but holdout sample is still too small"
-
-    };
-
-  }
-
-
-  /*
-   * One-sided regime warning.
-   */
-
-  const oneSided =
-    direction.long.trades === 0 ||
-    direction.short.trades === 0;
-
-
-  if (
-    overall.trades >= 60 &&
-    validation.trades >= 15 &&
-    overall.profitFactor >=
-      1.40 &&
-    overall.expectancyR >=
-      0.15 &&
-    validation.profitFactor >=
-      1.15 &&
-    validation.expectancyR >
-      0 &&
-    overall.maxDrawdown <=
-      12 &&
-    !oneSided
-  ) {
-
-    return {
-
-      grade:
-        "A",
-
-      verdict:
-        "Strong historical result across both directions"
-
-    };
-
-  }
-
-
-  if (
-    overall.trades >= 40 &&
-    validation.trades >= 10 &&
-    overall.profitFactor >=
-      1.20 &&
-    overall.expectancyR >=
-      0.08 &&
-    validation.expectancyR >=
-      0 &&
-    overall.maxDrawdown <=
-      16
-  ) {
-
-    return {
-
-      grade:
-        "B",
-
-      verdict:
-        oneSided
-          ? "Positive edge, but still concentrated in one market regime"
-          : "Promising historical edge"
-
-    };
-
-  }
-
-
-  if (
-    overall.profitFactor >
-      1.05 &&
-    overall.expectancyR >
+    metrics.totalR >
       0
-  ) {
 
-    return {
-
-      grade:
-        "C",
-
-      verdict:
-        "Positive overall, but robustness is not yet proven"
-
-    };
-
-  }
-
-
-  return {
-
-    grade:
-      "D",
-
-    verdict:
-      "No reliable historical edge"
-
-  };
+  );
 
 }
 
@@ -3906,28 +4033,28 @@ function gradeStrategy(
    DEVELOPMENT SELECTION SCORE
 ================================================================ */
 
-/*
- * CRITICAL:
- *
- * This score is calculated ONLY
- * from development data.
- *
- * Validation data is completely ignored
- * when selecting the best mode.
- */
-
-function developmentSelectionScore(
+function developmentScore(
   metrics
 ) {
 
   if (
-    metrics.trades <
-    10
+    !developmentEligible(
+      metrics
+    )
   ) {
 
+    /*
+     * Negative score makes it impossible
+     * to accidentally label an unprofitable
+     * development result as deployable.
+     */
+
     return (
-      -100 +
-      metrics.trades
+      -1000 +
+      metrics.expectancyR *
+      10 +
+      metrics.trades *
+      0.01
     );
 
   }
@@ -3936,7 +4063,7 @@ function developmentSelectionScore(
   return (
 
     metrics.expectancyR *
-      32
+      35
 
     +
 
@@ -3952,12 +4079,12 @@ function developmentSelectionScore(
       metrics.trades,
       120
     ) *
-      0.12
+      0.10
 
     -
 
     metrics.maxDrawdown *
-      1.35
+      1.50
 
   );
 
@@ -3965,10 +4092,158 @@ function developmentSelectionScore(
 
 
 /* ================================================================
-   RUN ONE MODE
+   GRADE
 ================================================================ */
 
-function runMode(
+function gradeStrategy(
+  overall,
+  development,
+  validation,
+  stability,
+  direction
+) {
+
+  if (
+    !developmentEligible(
+      development
+    )
+  ) {
+
+    return {
+
+      grade:
+        "NO EDGE",
+
+      verdict:
+        "Development sample does not contain a positive historical edge."
+
+    };
+
+  }
+
+
+  if (
+    overall.trades <
+    40
+  ) {
+
+    return {
+
+      grade:
+        "P",
+
+      verdict:
+        "Promising, but the total trade sample is still small."
+
+    };
+
+  }
+
+
+  if (
+    validation.trades <
+    10
+  ) {
+
+    return {
+
+      grade:
+        "P",
+
+      verdict:
+        "Development is positive, but validation sample is too small."
+
+    };
+
+  }
+
+
+  const bothDirections =
+    direction.long.trades >=
+      5 &&
+    direction.short.trades >=
+      5;
+
+
+  if (
+    overall.trades >= 80 &&
+    validation.trades >= 20 &&
+    development.profitFactor >=
+      1.20 &&
+    development.expectancyR >
+      0.08 &&
+    validation.profitFactor >=
+      1.15 &&
+    validation.expectancyR >
+      0 &&
+    stability.positiveWindows >=
+      3 &&
+    overall.maxDrawdown <=
+      12 &&
+    bothDirections
+  ) {
+
+    return {
+
+      grade:
+        "A",
+
+      verdict:
+        "Strong multi-period historical result."
+
+    };
+
+  }
+
+
+  if (
+    overall.trades >= 50 &&
+    validation.trades >= 12 &&
+    development.profitFactor >
+      1.10 &&
+    development.expectancyR >
+      0.04 &&
+    validation.expectancyR >=
+      0 &&
+    stability.positiveWindows >=
+      3 &&
+    overall.maxDrawdown <=
+      16
+  ) {
+
+    return {
+
+      grade:
+        "B",
+
+      verdict:
+        bothDirections
+          ? "Promising and relatively stable historical edge."
+          : "Promising, but directional coverage is still incomplete."
+
+    };
+
+  }
+
+
+  return {
+
+    grade:
+      "C",
+
+    verdict:
+      "Positive development edge, but robustness needs more evidence."
+
+  };
+
+}
+
+
+/* ================================================================
+   RUN PROFILE
+================================================================ */
+
+function runProfile(
   data,
   startIndex,
   settings
@@ -4031,10 +4306,6 @@ function runMode(
       trade
     );
 
-
-    /*
-     * One position at a time.
-     */
 
     index =
       trade.exitIndex +
@@ -4129,42 +4400,51 @@ function runMode(
   const direction = {
 
     long:
-      compactMetrics(
-
-        calculateMetrics(
-          longTrades,
-          settings,
-          false
-        )
-
+      calculateMetrics(
+        longTrades,
+        settings,
+        false
       ),
 
     short:
-      compactMetrics(
-
-        calculateMetrics(
-          shortTrades,
-          settings,
-          false
-        )
-
+      calculateMetrics(
+        shortTrades,
+        settings,
+        false
       )
 
   };
 
 
+  const stability =
+    stabilityWindows(
+      trades,
+      startTime,
+      endTime,
+      settings
+    );
+
+
   const grade =
     gradeStrategy(
       overall,
+      development,
       validation,
+      stability,
       direction
+    );
+
+
+  const selectionScore =
+    developmentScore(
+      development
     );
 
 
   return {
 
-    mode:
-      settings.mode,
+    profile:
+      settings.profile,
 
     settings,
 
@@ -4173,15 +4453,15 @@ function runMode(
         splitTime
       ).toISOString(),
 
+    deployable:
+      developmentEligible(
+        development
+      ),
+
     selectionScore:
       round(
-
-        developmentSelectionScore(
-          development
-        ),
-
+        selectionScore,
         3
-
       ),
 
     metrics: {
@@ -4202,6 +4482,8 @@ function runMode(
 
     direction,
 
+    stability,
+
     trades
 
   };
@@ -4210,88 +4492,117 @@ function runMode(
 
 
 /* ================================================================
-   STRATEGY MODES
+   PROFILES
 ================================================================ */
 
-function presets(
+function profiles(
   base
 ) {
 
   return [
 
     /* ============================================================
-       STRICT
+       QUALITY
+
+       Trades only established,
+       high-strength trends.
     ============================================================ */
 
     {
 
       ...base,
 
-      mode:
-        "STRICT",
+      profile:
+        "QUALITY",
 
       minScore:
-        80,
+        85,
 
-      minADX:
-        18,
+      minH1ADX:
+        20,
 
-      pullbackBars:
-        5,
+      minM15ADX:
+        20,
 
-      pullbackToleranceATR:
+      minH1GapATR:
+        0.25,
+
+      minM15GapATR:
         0.18,
 
+      minH4GapATR:
+        0.35,
+
+      minM15AdxDelta:
+        0,
+
+      pullbackBars:
+        6,
+
+      pullbackToleranceATR:
+        0.22,
+
       maxPullbackDepthATR:
-        0.50,
+        0.65,
 
       minBody:
-        0.45,
+        0.36,
 
       strongBody:
-        0.55,
+        0.48,
 
       maxChaseATR:
-        0.75,
+        0.90,
 
       longRsiMin:
-        48,
+        46,
 
       longRsiMax:
-        68,
+        70,
 
       shortRsiMin:
-        32,
+        30,
 
       shortRsiMax:
-        52,
+        54,
 
       cooldownBars:
-        3
+        2
 
     },
 
 
     /* ============================================================
        BALANCED
-
-       IMPORTANT:
-       This keeps the V1.2 rules that
-       produced the current 35-trade result.
     ============================================================ */
 
     {
 
       ...base,
 
-      mode:
+      profile:
         "BALANCED",
 
       minScore:
-        68,
+        75,
 
-      minADX:
-        14,
+      minH1ADX:
+        17,
+
+      minM15ADX:
+        16,
+
+      minH1GapATR:
+        0.18,
+
+      minM15GapATR:
+        0.12,
+
+      minH4GapATR:
+        0.22,
+
+      minM15AdxDelta:
+        -2,
 
       pullbackBars:
         8,
@@ -4300,7 +4611,7 @@ function presets(
         0.28,
 
       maxPullbackDepthATR:
-        0.75,
+        0.78,
 
       minBody:
         0.30,
@@ -4312,7 +4623,7 @@ function presets(
         1.10,
 
       longRsiMin:
-        44,
+        43,
 
       longRsiMax:
         72,
@@ -4321,7 +4632,7 @@ function presets(
         28,
 
       shortRsiMax:
-        56,
+        57,
 
       cooldownBars:
         1
@@ -4337,14 +4648,29 @@ function presets(
 
       ...base,
 
-      mode:
+      profile:
         "ACTIVE",
 
       minScore:
-        60,
+        70,
 
-      minADX:
-        12,
+      minH1ADX:
+        15,
+
+      minM15ADX:
+        14,
+
+      minH1GapATR:
+        0.12,
+
+      minM15GapATR:
+        0.08,
+
+      minH4GapATR:
+        0.15,
+
+      minM15AdxDelta:
+        -4,
 
       pullbackBars:
         10,
@@ -4356,22 +4682,22 @@ function presets(
         0.95,
 
       minBody:
-        0.22,
+        0.24,
 
       strongBody:
-        0.34,
+        0.35,
 
       maxChaseATR:
-        1.35,
+        1.30,
 
       longRsiMin:
         40,
 
       longRsiMax:
-        76,
+        75,
 
       shortRsiMin:
-        24,
+        25,
 
       shortRsiMax:
         60,
@@ -4387,12 +4713,12 @@ function presets(
 
 
 /* ================================================================
-   CURRENT TIMEFRAME STATE
+   TIMEFRAME STATE
 ================================================================ */
 
 function timeframeState(
   candle,
-  type
+  timeframe
 ) {
 
   let direction =
@@ -4400,7 +4726,8 @@ function timeframeState(
 
 
   if (
-    type === "H4"
+    timeframe ===
+    "H4"
   ) {
 
     if (
@@ -4426,7 +4753,8 @@ function timeframeState(
 
 
   if (
-    type === "H1"
+    timeframe ===
+    "H1"
   ) {
 
     if (
@@ -4452,7 +4780,8 @@ function timeframeState(
 
 
   if (
-    type === "M15"
+    timeframe ===
+    "M15"
   ) {
 
     if (
@@ -4478,7 +4807,8 @@ function timeframeState(
 
 
   if (
-    type === "M5"
+    timeframe ===
+    "M5"
   ) {
 
     if (
@@ -4541,6 +4871,24 @@ function timeframeState(
       round(
         candle.adx14,
         1
+      ),
+
+    adxDelta:
+      round(
+        candle.adxDelta,
+        2
+      ),
+
+    gap2050ATR:
+      round(
+        candle.gap2050ATR,
+        2
+      ),
+
+    gap50200ATR:
+      round(
+        candle.gap50200ATR,
+        2
       )
 
   };
@@ -4549,12 +4897,12 @@ function timeframeState(
 
 
 /* ================================================================
-   LATEST MARKET STATE
+   CURRENT MARKET
 ================================================================ */
 
 function latestState(
   data,
-  modeSettings
+  settingsList
 ) {
 
   const index =
@@ -4614,45 +4962,41 @@ function latestState(
   }
 
 
-  const liveModes =
-    [];
+  const profilesLive =
+    settingsList.map(
+      settings => {
+
+        const signal =
+          getSignal(
+            data,
+            index,
+            settings
+          );
 
 
-  for (
-    const settings of
-    modeSettings
-  ) {
+        return {
 
-    const signal =
-      getSignal(
-        data,
-        index,
-        settings
-      );
+          profile:
+            settings.profile,
 
+          signal:
+            signal
+              ? (
+                  signal.side === 1
+                    ? "BUY"
+                    : "SELL"
+                )
+              : "WAIT",
 
-    liveModes.push({
+          score:
+            signal
+              ? signal.score
+              : null
 
-      mode:
-        settings.mode,
+        };
 
-      signal:
-        signal
-          ? (
-              signal.side === 1
-                ? "BUY"
-                : "SELL"
-            )
-          : "WAIT",
-
-      score:
-        signal
-          ? signal.score
-          : null
-
-    });
-
-  }
+      }
+    );
 
 
   return {
@@ -4670,7 +5014,8 @@ function latestState(
 
     bias,
 
-    liveModes,
+    profiles:
+      profilesLive,
 
     timeframes: {
 
@@ -4741,19 +5086,19 @@ async function loadData(
   }
 
 
-  const rawM5 =
+  const m5 =
     await fetchM5History(
       targetBars
     );
 
 
   if (
-    rawM5.length <
-    1000
+    m5.length <
+    10000
   ) {
 
     throw new Error(
-      `Only ${rawM5.length} M5 candles were returned.`
+      `Only ${m5.length} M5 candles were returned. More history is required for robust H4 EMA200 testing.`
     );
 
   }
@@ -4761,7 +5106,7 @@ async function loadData(
 
   const data =
     buildData(
-      rawM5
+      m5
     );
 
 
@@ -4784,7 +5129,55 @@ async function loadData(
 
 
 /* ================================================================
-   API HANDLER
+   COMPACT RESULT
+================================================================ */
+
+function compact(
+  metrics
+) {
+
+  return {
+
+    trades:
+      metrics.trades,
+
+    wins:
+      metrics.wins,
+
+    losses:
+      metrics.losses,
+
+    breakevens:
+      metrics.breakevens,
+
+    buys:
+      metrics.buys,
+
+    sells:
+      metrics.sells,
+
+    winRate:
+      metrics.winRate,
+
+    profitFactor:
+      metrics.profitFactor,
+
+    expectancyR:
+      metrics.expectancyR,
+
+    totalR:
+      metrics.totalR,
+
+    maxDrawdown:
+      metrics.maxDrawdown
+
+  };
+
+}
+
+
+/* ================================================================
+   HANDLER
 ================================================================ */
 
 export default async function handler(
@@ -4795,12 +5188,6 @@ export default async function handler(
   res.setHeader(
     "Cache-Control",
     "no-store, no-cache, must-revalidate"
-  );
-
-
-  res.setHeader(
-    "Content-Type",
-    "application/json; charset=utf-8"
   );
 
 
@@ -4816,7 +5203,7 @@ export default async function handler(
         ok: false,
 
         error:
-          "GET requests only."
+          "GET only"
 
       });
 
@@ -4832,7 +5219,7 @@ export default async function handler(
         ok: false,
 
         error:
-          "Missing TWELVE_DATA_API_KEY_4."
+          "Missing TWELVE_DATA_API_KEY_4"
 
       });
 
@@ -4845,23 +5232,33 @@ export default async function handler(
       req.query || {};
 
 
-    /* ============================================================
-       USER / BASE SETTINGS
-    ============================================================ */
+    /*
+     * Default is deliberately longer
+     * than V1.3.
+     */
 
-    const requestedTestBars =
+    const requestedBars =
       integerParam(
         q.bars,
-        9000,
-        3000,
-        15000
+        18000,
+        6000,
+        25000
       );
 
+
+    /*
+     * Your latest posted run produced
+     * +1.46R TP outcomes after 0.04R cost.
+     *
+     * That means gross target = 1.50R.
+     *
+     * Therefore V1.4 defaults to 1.50.
+     */
 
     const targetR =
       numberParam(
         q.targetR,
-        1.8,
+        1.5,
         0.5,
         5
       );
@@ -4885,6 +5282,15 @@ export default async function handler(
       );
 
 
+    const initialBalance =
+      numberParam(
+        q.initialBalance,
+        10000,
+        100,
+        100000000
+      );
+
+
     const useBreakeven =
       boolParam(
         q.useBreakeven,
@@ -4898,6 +5304,13 @@ export default async function handler(
         1.0,
         0.25,
         3
+      );
+
+
+    const useSession =
+      boolParam(
+        q.useSession,
+        true
       );
 
 
@@ -4919,26 +5332,15 @@ export default async function handler(
       );
 
 
-    const useSession =
-      boolParam(
-        q.useSession,
-        true
-      );
+    /*
+     * Need evaluation bars
+     * plus indicator warm-up.
+     */
 
-
-    const initialBalance =
-      numberParam(
-        q.initialBalance,
-        10000,
-        100,
-        100000000
-      );
-
-
-    const targetHistoryBars =
+    const historyTarget =
       Math.min(
 
-        requestedTestBars +
+        requestedBars +
         WARMUP_M5_BARS,
 
         CHUNK_SIZE *
@@ -4947,59 +5349,53 @@ export default async function handler(
       );
 
 
-    /* ============================================================
-       LOAD HISTORY
-    ============================================================ */
-
     const data =
       await loadData(
-        targetHistoryBars
+        historyTarget
       );
 
 
-    const validStart =
+    const firstValid =
       firstValidIndex(
         data
       );
 
 
     if (
-      validStart <
+      firstValid <
       0
     ) {
 
       throw new Error(
-        "Could not build enough H4 history for EMA200."
+        "Unable to obtain enough valid H4 EMA200 history."
       );
 
     }
 
 
-    /*
-     * Test only the requested latest bars,
-     * while preserving the earlier candles
-     * for indicator warm-up.
-     */
-
     const startIndex =
       Math.max(
 
-        validStart,
+        firstValid,
 
         data.m5.length -
-        requestedTestBars
+        requestedBars
 
       );
 
 
-    if (
-      startIndex >=
+    const evaluatedBars =
       data.m5.length -
-      50
+      startIndex;
+
+
+    if (
+      evaluatedBars <
+      3000
     ) {
 
       throw new Error(
-        "Not enough valid evaluation history after EMA warm-up."
+        `Only ${evaluatedBars} valid evaluation candles remain after H4 warm-up.`
       );
 
     }
@@ -5007,15 +5403,23 @@ export default async function handler(
 
     const base = {
 
-      testBars:
-        data.m5.length -
-        startIndex,
-
       targetR,
+
+      riskPct,
+
+      costR,
+
+      initialBalance,
 
       useBreakeven,
 
       breakevenR,
+
+      useSession,
+
+      sessionStart,
+
+      sessionEnd,
 
       swingLookback:
         6,
@@ -5033,37 +5437,21 @@ export default async function handler(
         48,
 
       minAtrPct:
-        0.015,
-
-      useSession,
-
-      sessionStart,
-
-      sessionEnd,
-
-      initialBalance,
-
-      riskPct,
-
-      costR
+        0.015
 
     };
 
 
-    const modeSettings =
-      presets(
+    const settingsList =
+      profiles(
         base
       );
 
 
-    /* ============================================================
-       RUN EACH MODE
-    ============================================================ */
-
     const results =
-      modeSettings.map(
+      settingsList.map(
         settings =>
-          runMode(
+          runProfile(
 
             data,
 
@@ -5076,8 +5464,7 @@ export default async function handler(
 
 
     /*
-     * BEST MODE IS CHOSEN USING
-     * DEVELOPMENT ONLY.
+     * Ranking uses DEVELOPMENT ONLY.
      */
 
     const ranked =
@@ -5094,71 +5481,85 @@ export default async function handler(
         );
 
 
-    const best =
-      ranked[0];
+    /*
+     * Candidate must pass positive
+     * development gate.
+     */
 
-
-    /* ============================================================
-       LIVE STATE
-    ============================================================ */
-
-    const latest =
-      latestState(
-        data,
-        modeSettings
+    const eligible =
+      ranked.filter(
+        result =>
+          result.deployable
       );
 
 
-    const periodStart =
+    const deployable =
+      eligible.length >
+      0;
+
+
+    /*
+     * If nothing qualifies,
+     * still return best diagnostic profile
+     * but clearly label NO EDGE.
+     */
+
+    const selected =
+      deployable
+        ? eligible[0]
+        : ranked[0];
+
+
+    const startTime =
       data.m5[
         startIndex
-      ];
+      ].ts;
 
 
-    const periodEnd =
+    const endTime =
       data.m5[
         data.m5.length -
         1
-      ];
+      ].closeTs;
 
-
-    /* ============================================================
-       REGIME WARNING
-    ============================================================ */
 
     let regimeCoverage =
-      "MIXED";
+      "BOTH DIRECTIONS";
 
 
     if (
-      best.metrics.buys === 0 &&
-      best.metrics.sells > 0
+      selected.metrics.buys ===
+        0 &&
+      selected.metrics.sells >
+        0
     ) {
 
       regimeCoverage =
-        "SHORT-ONLY SAMPLE";
+        "SHORT ONLY";
 
     }
 
 
     if (
-      best.metrics.sells === 0 &&
-      best.metrics.buys > 0
+      selected.metrics.sells ===
+        0 &&
+      selected.metrics.buys >
+        0
     ) {
 
       regimeCoverage =
-        "LONG-ONLY SAMPLE";
+        "LONG ONLY";
 
     }
 
 
     if (
-      best.metrics.buys > 0 &&
-      best.metrics.sells > 0
+      selected.metrics.trades ===
+      0
     ) {
 
       regimeCoverage =
-        "BOTH DIRECTIONS TESTED";
+        "NO TRADES";
 
     }
 
@@ -5170,7 +5571,7 @@ export default async function handler(
         ok: true,
 
         strategy:
-          "TYSON TREND PULLBACK V1.3",
+          "TYSON REGIME PULLBACK V1.4",
 
         symbol:
           SYMBOL,
@@ -5178,80 +5579,112 @@ export default async function handler(
         provider:
           "Twelve Data",
 
-        dataArchitecture:
-          "M5 source with locally aggregated M15/H1/H4",
+        sourceTimeframe:
+          "M5",
 
-        selectionMethod:
-          "Best mode selected using first 70% only",
+        actualTargetR:
+          targetR,
 
-        requestedTestBars,
+        costR,
+
+        netFullTPR:
+          round(
+            targetR -
+            costR,
+            2
+          ),
+
+        netFullLossR:
+          round(
+            -1 -
+            costR,
+            2
+          ),
 
         downloadedM5Bars:
           data.m5.length,
 
+        requestedEvaluationBars:
+          requestedBars,
+
         evaluatedM5Bars:
-          data.m5.length -
-          startIndex,
+          evaluatedBars,
 
         period: {
 
           start:
             new Date(
-              periodStart.ts
+              startTime
             ).toISOString(),
 
           end:
             new Date(
-              periodEnd.closeTs
+              endTime
             ).toISOString()
 
         },
 
-        bestMode:
-          best.mode,
+        deployable,
+
+        selectedProfile:
+          deployable
+            ? selected.profile
+            : "NO ROBUST EDGE",
+
+        diagnosticProfile:
+          selected.profile,
 
         regimeCoverage,
 
-        best: {
+        selected: {
 
-          mode:
-            best.mode,
+          profile:
+            selected.profile,
+
+          deployable:
+            selected.deployable,
 
           selectionScore:
-            best.selectionScore,
+            selected.selectionScore,
 
           splitTime:
-            best.splitTime,
+            selected.splitTime,
+
+          settings:
+            selected.settings,
 
           metrics:
-            best.metrics,
+            selected.metrics,
 
           development:
-            best.development,
+            selected.development,
 
           validation:
-            best.validation,
+            selected.validation,
 
           direction:
-            best.direction
+            selected.direction,
+
+          stability:
+            selected.stability
 
         },
 
-        modes:
+        profiles:
           ranked.map(
             result => ({
 
-              mode:
-                result.mode,
+              profile:
+                result.profile,
+
+              deployable:
+                result.deployable,
 
               selectionScore:
                 result.selectionScore,
 
-              splitTime:
-                result.splitTime,
-
               metrics:
-                compactMetrics(
+                compact(
                   result.metrics
                 ),
 
@@ -5262,49 +5695,70 @@ export default async function handler(
                 result.metrics.verdict,
 
               development:
-                compactMetrics(
+                compact(
                   result.development
                 ),
 
               validation:
-                compactMetrics(
+                compact(
                   result.validation
                 ),
 
-              direction:
-                result.direction
+              direction: {
+
+                long:
+                  compact(
+                    result.direction.long
+                  ),
+
+                short:
+                  compact(
+                    result.direction.short
+                  )
+
+              },
+
+              positiveWindows:
+                result.stability
+                  .positiveWindows
 
             })
           ),
 
-        latest,
+        latest:
+          latestState(
+            data,
+            settingsList
+          ),
 
         trades:
-          best.trades
-            .slice(-400)
+          selected.trades
+            .slice(-500)
             .reverse(),
 
         assumptions: [
 
-          "Only completed M5 candles are downloaded.",
+          "Best profile is selected using development data only.",
 
-          "M15, H1 and H4 are created locally from the same M5 feed.",
+          "A profile cannot be deployable with negative development expectancy.",
 
-          "Higher-timeframe candles cannot be used until their scheduled close time.",
+          "Validation data never influences selection.",
 
-          "Signals enter on the next M5 candle open.",
+          "M15, H1 and H4 are aggregated from the same M5 source.",
 
-          "Stop loss wins same-bar TP/SL collisions for conservative testing.",
+          "Only completed M5 candles create signals.",
 
-          "Breakeven becomes active only for subsequent bars.",
+          "Higher-timeframe candles are unavailable until their scheduled close.",
 
-          "Trading cost is deducted in R from every trade.",
+          "Entry occurs on the next M5 open.",
 
-          "The best strategy mode is chosen using development data only.",
+          "SL is assumed first if SL and TP occur within the same M5 candle.",
 
-          "Validation data does not influence strategy selection.",
+          "Breakeven becomes active only for following candles.",
 
-          "Historical performance is not a guarantee of future performance."
+          "Trading cost is deducted from every result.",
+
+          "Historical results do not guarantee future performance."
 
         ]
 
@@ -5316,7 +5770,7 @@ export default async function handler(
   ) {
 
     console.error(
-      "V1.3 BACKTEST ERROR:",
+      "V1.4 ERROR:",
       error
     );
 
@@ -5329,7 +5783,7 @@ export default async function handler(
 
         error:
           error?.message ||
-          "Backtest failed."
+          "Backtest failed"
 
       });
 
