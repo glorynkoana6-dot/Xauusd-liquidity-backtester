@@ -1,11 +1,13 @@
 /* ================================================================
    TYSON TRADE AI
-   TREND PULLBACK V1.2
-   MULTI-MODE BACKTEST ENGINE
-   ---------------------------------------------------------------
+   TREND PULLBACK V1.3
+   ROBUST WALK-FORWARD BACKTEST ENGINE
+
+   FILE
+   ----
    /api/backtest.js
 
-   SYMBOL
+   MARKET
    ------
    XAU/USD
 
@@ -13,41 +15,61 @@
    --------
    Twelve Data
 
-   ENV
-   ---
+   ENVIRONMENT VARIABLES
+   ---------------------
    TWELVE_DATA_API_KEY_4
-   fallback:
+
+   FALLBACK
+   --------
    TWELVE_DATA_API_KEY
 
-   TIMEFRAMES
-   ----------
-   M5  execution
-   M15 local trend
-   H1  primary trend
-   H4  macro trend
+   DATA ARCHITECTURE
+   -----------------
+   Download M5 history.
+   Build M15 / H1 / H4 locally from M5.
 
-   MODES
+   BENEFITS
+   --------
+   - Same underlying feed
+   - Exact timestamp synchronization
+   - Lower API usage
+   - No HTF data mismatch
+   - Easier long-history testing
+
+   BACKTEST
+   --------
+   First 70%  = development
+   Last 30%   = untouched validation
+
+   IMPORTANT
+   ---------
+   Mode selection uses DEVELOPMENT DATA ONLY.
+
+   Validation performance is NEVER used to select the best mode.
+
+   ENTRY
    -----
-   STRICT
-   BALANCED
-   ACTIVE
+   Signal on completed M5 candle.
+   Entry on NEXT M5 open.
 
-   BACKTEST DESIGN
-   ---------------
-   - completed candles only
-   - completed HTF candles only
-   - next M5 open entry
-   - structural + ATR stop
-   - R target
-   - conservative same-bar collision
-   - optional breakeven
-   - fixed fractional risk
-   - 70/30 chronological validation
+   EXIT
+   ----
+   Structural + ATR stop.
+   Default target = 1.8R.
+   Breakeven after +1R.
+
+   COST
+   ----
+   Default trading cost = 0.04R per trade.
+
+   DISCLAIMER
+   ----------
+   Historical performance does not guarantee future profitability.
 ================================================================ */
 
 
 /* ================================================================
-   GLOBAL
+   CONFIG
 ================================================================ */
 
 const TD_KEY =
@@ -63,33 +85,48 @@ const SYMBOL =
   "XAU/USD";
 
 
-const TF = {
+const M5_MS =
+  5 * 60 * 1000;
 
-  m5: {
-    interval: "5min",
-    ms: 5 * 60 * 1000
-  },
 
-  m15: {
-    interval: "15min",
-    ms: 15 * 60 * 1000
-  },
+const TF_MS = {
 
-  h1: {
-    interval: "1h",
-    ms: 60 * 60 * 1000
-  },
+  m5:
+    5 * 60 * 1000,
 
-  h4: {
-    interval: "4h",
-    ms: 4 * 60 * 60 * 1000
-  }
+  m15:
+    15 * 60 * 1000,
+
+  h1:
+    60 * 60 * 1000,
+
+  h4:
+    4 * 60 * 60 * 1000
 
 };
 
 
+const CHUNK_SIZE =
+  5000;
+
+
+const MAX_CHUNKS =
+  6;
+
+
+/*
+ * H4 EMA200 requires roughly
+ * 200 * 48 = 9600 M5 bars.
+ *
+ * Give it some safety margin.
+ */
+
+const WARMUP_M5_BARS =
+  10500;
+
+
 /* ================================================================
-   HELPERS
+   BASIC HELPERS
 ================================================================ */
 
 function clamp(
@@ -121,18 +158,22 @@ function round(
       Number(value)
     )
   ) {
+
     return null;
+
   }
 
 
-  const p =
+  const factor =
     10 ** decimals;
 
 
   return (
     Math.round(
-      Number(value) * p
-    ) / p
+      Number(value) *
+      factor
+    ) /
+    factor
   );
 
 }
@@ -163,7 +204,9 @@ function numberParam(
   if (
     !Number.isFinite(n)
   ) {
+
     return fallback;
+
   }
 
 
@@ -184,12 +227,14 @@ function integerParam(
 ) {
 
   return Math.round(
+
     numberParam(
       value,
       fallback,
       min,
       max
     )
+
   );
 
 }
@@ -214,8 +259,10 @@ function boolParam(
   }
 
 
-  return String(raw) ===
-    "true";
+  return (
+    String(raw) ===
+    "true"
+  );
 
 }
 
@@ -242,15 +289,37 @@ function parseDate(value) {
 
   const ts =
     Date.parse(
+
       normalized.endsWith("Z")
         ? normalized
         : `${normalized}Z`
+
     );
 
 
   return Number.isFinite(ts)
     ? ts
     : null;
+
+}
+
+
+function twelveDate(
+  timestamp
+) {
+
+  return new Date(
+    timestamp
+  )
+    .toISOString()
+    .slice(
+      0,
+      19
+    )
+    .replace(
+      "T",
+      " "
+    );
 
 }
 
@@ -274,7 +343,9 @@ function ema(
     values.length <
     length
   ) {
+
     return output;
+
   }
 
 
@@ -303,7 +374,7 @@ function ema(
     seed;
 
 
-  const k =
+  const multiplier =
     2 /
     (
       length + 1
@@ -323,7 +394,7 @@ function ema(
           i - 1
         ]
       ) *
-        k +
+        multiplier +
       output[
         i - 1
       ];
@@ -345,7 +416,7 @@ function atr(
   length = 14
 ) {
 
-  const tr =
+  const trueRange =
     new Array(
       candles.length
     ).fill(null);
@@ -365,7 +436,7 @@ function atr(
       i === 0
     ) {
 
-      tr[i] =
+      trueRange[i] =
         candle.high -
         candle.low;
 
@@ -380,7 +451,7 @@ function atr(
       ].close;
 
 
-    tr[i] =
+    trueRange[i] =
       Math.max(
 
         candle.high -
@@ -411,7 +482,9 @@ function atr(
     candles.length <
     length
   ) {
+
     return output;
+
   }
 
 
@@ -425,7 +498,7 @@ function atr(
   ) {
 
     seed +=
-      tr[i];
+      trueRange[i];
 
   }
 
@@ -451,7 +524,7 @@ function atr(
           (
             length - 1
           ) +
-        tr[i]
+        trueRange[i]
       ) /
       length;
 
@@ -482,11 +555,14 @@ function rsi(
     values.length <
     length + 1
   ) {
+
     return output;
+
   }
 
 
   let gains = 0;
+
   let losses = 0;
 
 
@@ -522,24 +598,26 @@ function rsi(
   }
 
 
-  let avgGain =
-    gains / length;
+  let averageGain =
+    gains /
+    length;
 
 
-  let avgLoss =
-    losses / length;
+  let averageLoss =
+    losses /
+    length;
 
 
   output[length] =
-    avgLoss === 0
+    averageLoss === 0
       ? 100
       : 100 -
         (
           100 /
           (
             1 +
-            avgGain /
-            avgLoss
+            averageGain /
+            averageLoss
           )
         );
 
@@ -573,9 +651,9 @@ function rsi(
         : 0;
 
 
-    avgGain =
+    averageGain =
       (
-        avgGain *
+        averageGain *
           (
             length - 1
           ) +
@@ -584,9 +662,9 @@ function rsi(
       length;
 
 
-    avgLoss =
+    averageLoss =
       (
-        avgLoss *
+        averageLoss *
           (
             length - 1
           ) +
@@ -596,15 +674,15 @@ function rsi(
 
 
     output[i] =
-      avgLoss === 0
+      averageLoss === 0
         ? 100
         : 100 -
           (
             100 /
             (
               1 +
-              avgGain /
-              avgLoss
+              averageGain /
+              averageLoss
             )
           );
 
@@ -625,33 +703,47 @@ function adx(
   length = 14
 ) {
 
-  const count =
+  const size =
     candles.length;
 
 
   const output =
-    new Array(count)
-      .fill(null);
+    new Array(
+      size
+    ).fill(null);
 
 
   const tr =
-    new Array(count)
-      .fill(0);
+    new Array(
+      size
+    ).fill(0);
 
 
   const plusDM =
-    new Array(count)
-      .fill(0);
+    new Array(
+      size
+    ).fill(0);
 
 
   const minusDM =
-    new Array(count)
-      .fill(0);
+    new Array(
+      size
+    ).fill(0);
+
+
+  if (
+    size <
+    length * 2 + 2
+  ) {
+
+    return output;
+
+  }
 
 
   for (
     let i = 1;
-    i < count;
+    i < size;
     i++
   ) {
 
@@ -716,16 +808,10 @@ function adx(
   }
 
 
-  if (
-    count <
-    length * 2 + 2
-  ) {
-    return output;
-  }
-
-
   let smoothTR = 0;
+
   let smoothPlus = 0;
+
   let smoothMinus = 0;
 
 
@@ -735,7 +821,8 @@ function adx(
     i++
   ) {
 
-    smoothTR += tr[i];
+    smoothTR +=
+      tr[i];
 
     smoothPlus +=
       plusDM[i];
@@ -747,18 +834,20 @@ function adx(
 
 
   const dx =
-    new Array(count)
-      .fill(null);
+    new Array(
+      size
+    ).fill(null);
 
 
   for (
     let i = length;
-    i < count;
+    i < size;
     i++
   ) {
 
     if (
-      i > length
+      i >
+      length
     ) {
 
       smoothTR =
@@ -787,7 +876,9 @@ function adx(
     if (
       smoothTR <= 0
     ) {
+
       continue;
+
     }
 
 
@@ -823,20 +914,23 @@ function adx(
   }
 
 
-  let seedCount = 0;
   let seed = 0;
+
+  let seedCount = 0;
 
 
   for (
     let i = length;
-    i < count;
+    i < size;
     i++
   ) {
 
     if (
       dx[i] === null
     ) {
+
       continue;
+
     }
 
 
@@ -889,17 +983,13 @@ function adx(
 
 
 /* ================================================================
-   FETCH
+   TWELVE DATA PAGE
 ================================================================ */
 
-async function fetchSeries(
-  timeframe,
-  outputsize
+async function fetchM5Page(
+  outputsize,
+  endDate = null
 ) {
-
-  const config =
-    TF[timeframe];
-
 
   const url =
     new URL(
@@ -915,13 +1005,15 @@ async function fetchSeries(
 
   url.searchParams.set(
     "interval",
-    config.interval
+    "5min"
   );
 
 
   url.searchParams.set(
     "outputsize",
-    String(outputsize)
+    String(
+      outputsize
+    )
   );
 
 
@@ -943,6 +1035,20 @@ async function fetchSeries(
   );
 
 
+  if (
+    endDate !== null
+  ) {
+
+    url.searchParams.set(
+      "end_date",
+      twelveDate(
+        endDate
+      )
+    );
+
+  }
+
+
   const response =
     await fetch(
       url.toString(),
@@ -953,18 +1059,32 @@ async function fetchSeries(
     );
 
 
-  const json =
-    await response.json();
+  let json;
+
+
+  try {
+
+    json =
+      await response.json();
+
+  } catch {
+
+    throw new Error(
+      "Twelve Data returned invalid JSON."
+    );
+
+  }
 
 
   if (
     !response.ok ||
-    json?.status === "error"
+    json?.status ===
+      "error"
   ) {
 
     throw new Error(
       json?.message ||
-      `${timeframe} request failed`
+      `Twelve Data HTTP ${response.status}`
     );
 
   }
@@ -977,7 +1097,7 @@ async function fetchSeries(
   ) {
 
     throw new Error(
-      `No ${timeframe} data returned`
+      "No M5 candles returned."
     );
 
   }
@@ -987,81 +1107,227 @@ async function fetchSeries(
     Date.now();
 
 
-  const data =
-    json.values
+  return json.values
 
-      .map(
-        row => {
+    .map(
+      row => {
 
-          const ts =
-            parseDate(
-              row.datetime
-            );
-
-
-          const open =
-            Number(
-              row.open
-            );
+        const ts =
+          parseDate(
+            row.datetime
+          );
 
 
-          const high =
-            Number(
-              row.high
-            );
+        const open =
+          Number(
+            row.open
+          );
 
 
-          const low =
-            Number(
-              row.low
-            );
+        const high =
+          Number(
+            row.high
+          );
 
 
-          const close =
-            Number(
-              row.close
-            );
+        const low =
+          Number(
+            row.low
+          );
 
 
-          if (
-            !Number.isFinite(ts) ||
-            !Number.isFinite(open) ||
-            !Number.isFinite(high) ||
-            !Number.isFinite(low) ||
-            !Number.isFinite(close)
-          ) {
-
-            return null;
-
-          }
+        const close =
+          Number(
+            row.close
+          );
 
 
-          return {
+        if (
+          !Number.isFinite(ts) ||
+          !Number.isFinite(open) ||
+          !Number.isFinite(high) ||
+          !Number.isFinite(low) ||
+          !Number.isFinite(close)
+        ) {
 
-            ts,
-
-            closeTs:
-              ts +
-              config.ms,
-
-            open,
-            high,
-            low,
-            close
-
-          };
+          return null;
 
         }
-      )
 
-      .filter(Boolean)
 
-      .filter(
-        candle =>
-          candle.closeTs <=
-          now - 1000
-      )
+        return {
 
+          ts,
+
+          closeTs:
+            ts +
+            M5_MS,
+
+          open,
+          high,
+          low,
+          close
+
+        };
+
+      }
+    )
+
+    .filter(Boolean)
+
+    /*
+     * Do not include the live M5 candle.
+     */
+    .filter(
+      candle =>
+        candle.closeTs <=
+        now - 1000
+    )
+
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        a.ts -
+        b.ts
+    );
+
+}
+
+
+/* ================================================================
+   PAGINATED M5 HISTORY
+================================================================ */
+
+async function fetchM5History(
+  targetBars
+) {
+
+  const all =
+    [];
+
+
+  let endDate =
+    null;
+
+
+  let previousOldest =
+    null;
+
+
+  for (
+    let chunk = 0;
+    chunk < MAX_CHUNKS;
+    chunk++
+  ) {
+
+    const stillNeeded =
+      targetBars -
+      all.length;
+
+
+    if (
+      stillNeeded <= 0
+    ) {
+
+      break;
+
+    }
+
+
+    const requestSize =
+      Math.min(
+        CHUNK_SIZE,
+        Math.max(
+          500,
+          stillNeeded
+        )
+      );
+
+
+    const page =
+      await fetchM5Page(
+        requestSize,
+        endDate
+      );
+
+
+    if (
+      !page.length
+    ) {
+
+      break;
+
+    }
+
+
+    all.push(
+      ...page
+    );
+
+
+    const oldest =
+      page[0].ts;
+
+
+    /*
+     * Protect against API returning
+     * the same page repeatedly.
+     */
+
+    if (
+      previousOldest !== null &&
+      oldest >=
+        previousOldest
+    ) {
+
+      break;
+
+    }
+
+
+    previousOldest =
+      oldest;
+
+
+    /*
+     * Ask for data before
+     * the oldest candle returned.
+     */
+
+    endDate =
+      oldest -
+      1000;
+
+  }
+
+
+  /*
+   * Deduplicate.
+   */
+
+  const map =
+    new Map();
+
+
+  for (
+    const candle of
+    all
+  ) {
+
+    map.set(
+      candle.ts,
+      candle
+    );
+
+  }
+
+
+  const candles =
+    Array.from(
+      map.values()
+    )
       .sort(
         (
           a,
@@ -1072,42 +1338,168 @@ async function fetchSeries(
       );
 
 
-  const unique = [];
+  /*
+   * Keep latest requested amount.
+   */
 
-  let lastTs =
-    null;
-
-
-  for (
-    const candle of data
+  if (
+    candles.length >
+    targetBars
   ) {
 
-    if (
-      candle.ts ===
-      lastTs
-    ) {
-      continue;
-    }
-
-
-    unique.push(
-      candle
+    return candles.slice(
+      candles.length -
+      targetBars
     );
-
-
-    lastTs =
-      candle.ts;
 
   }
 
 
-  return unique;
+  return candles;
 
 }
 
 
 /* ================================================================
-   DECORATE
+   AGGREGATE M5 -> HIGHER TIMEFRAMES
+================================================================ */
+
+function aggregateCandles(
+  source,
+  timeframeMs
+) {
+
+  if (
+    !source.length
+  ) {
+
+    return [];
+
+  }
+
+
+  const buckets =
+    new Map();
+
+
+  for (
+    const candle of
+    source
+  ) {
+
+    const bucketTs =
+      Math.floor(
+        candle.ts /
+        timeframeMs
+      ) *
+      timeframeMs;
+
+
+    let bar =
+      buckets.get(
+        bucketTs
+      );
+
+
+    if (!bar) {
+
+      bar = {
+
+        ts:
+          bucketTs,
+
+        closeTs:
+          bucketTs +
+          timeframeMs,
+
+        open:
+          candle.open,
+
+        high:
+          candle.high,
+
+        low:
+          candle.low,
+
+        close:
+          candle.close,
+
+        count:
+          1
+
+      };
+
+
+      buckets.set(
+        bucketTs,
+        bar
+      );
+
+      continue;
+
+    }
+
+
+    bar.high =
+      Math.max(
+        bar.high,
+        candle.high
+      );
+
+
+    bar.low =
+      Math.min(
+        bar.low,
+        candle.low
+      );
+
+
+    bar.close =
+      candle.close;
+
+
+    bar.count++;
+
+  }
+
+
+  const output =
+    Array.from(
+      buckets.values()
+    )
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          a.ts -
+          b.ts
+      );
+
+
+  /*
+   * The first bucket may be incomplete
+   * because downloaded history can begin
+   * part way through an HTF candle.
+   */
+
+  if (
+    output.length >
+    1
+  ) {
+
+    output.shift();
+
+  }
+
+
+  return output;
+
+}
+
+
+/* ================================================================
+   DECORATE CANDLES
 ================================================================ */
 
 function decorate(
@@ -1242,7 +1634,63 @@ function decorate(
 
 
 /* ================================================================
-   COMPLETED HTF BAR
+   BUILD ALL TIMEFRAMES
+================================================================ */
+
+function buildData(
+  rawM5
+) {
+
+  const rawM15 =
+    aggregateCandles(
+      rawM5,
+      TF_MS.m15
+    );
+
+
+  const rawH1 =
+    aggregateCandles(
+      rawM5,
+      TF_MS.h1
+    );
+
+
+  const rawH4 =
+    aggregateCandles(
+      rawM5,
+      TF_MS.h4
+    );
+
+
+  return {
+
+    m5:
+      decorate(
+        rawM5
+      ),
+
+    m15:
+      decorate(
+        rawM15
+      ),
+
+    h1:
+      decorate(
+        rawH1
+      ),
+
+    h4:
+      decorate(
+        rawH4
+      )
+
+  };
+
+}
+
+
+/* ================================================================
+   COMPLETED HTF LOOKUP
 ================================================================ */
 
 function completedIndex(
@@ -1253,16 +1701,19 @@ function completedIndex(
   let left = 0;
 
   let right =
-    candles.length - 1;
+    candles.length -
+    1;
 
-  let answer = -1;
+
+  let result =
+    -1;
 
 
   while (
     left <= right
   ) {
 
-    const mid =
+    const middle =
       Math.floor(
         (
           left +
@@ -1273,34 +1724,37 @@ function completedIndex(
 
 
     if (
-      candles[mid]
-        .closeTs <=
+      candles[
+        middle
+      ].closeTs <=
       timestamp
     ) {
 
-      answer =
-        mid;
+      result =
+        middle;
 
       left =
-        mid + 1;
+        middle +
+        1;
 
     } else {
 
       right =
-        mid - 1;
+        middle -
+        1;
 
     }
 
   }
 
 
-  return answer;
+  return result;
 
 }
 
 
 /* ================================================================
-   MTF CONTEXT
+   CONTEXT
 ================================================================ */
 
 function getContext(
@@ -1319,28 +1773,28 @@ function getContext(
   }
 
 
-  const time =
+  const timestamp =
     m5.closeTs;
 
 
   const m15Index =
     completedIndex(
       data.m15,
-      time
+      timestamp
     );
 
 
   const h1Index =
     completedIndex(
       data.h1,
-      time
+      timestamp
     );
 
 
   const h4Index =
     completedIndex(
       data.h4,
-      time
+      timestamp
     );
 
 
@@ -1375,6 +1829,95 @@ function getContext(
       ]
 
   };
+
+}
+
+
+/* ================================================================
+   VALID CONTEXT
+================================================================ */
+
+function validContext(
+  context
+) {
+
+  if (!context) {
+    return false;
+  }
+
+
+  for (
+    const key of [
+      "m5",
+      "m15",
+      "h1",
+      "h4"
+    ]
+  ) {
+
+    const candle =
+      context[key];
+
+
+    if (
+      !Number.isFinite(
+        candle.ema20
+      ) ||
+      !Number.isFinite(
+        candle.ema50
+      ) ||
+      !Number.isFinite(
+        candle.ema200
+      )
+    ) {
+
+      return false;
+
+    }
+
+  }
+
+
+  return true;
+
+}
+
+
+/* ================================================================
+   FIRST VALID M5 INDEX
+================================================================ */
+
+function firstValidIndex(
+  data
+) {
+
+  for (
+    let i = 0;
+    i < data.m5.length;
+    i++
+  ) {
+
+    const context =
+      getContext(
+        data,
+        i
+      );
+
+
+    if (
+      validContext(
+        context
+      )
+    ) {
+
+      return i;
+
+    }
+
+  }
+
+
+  return -1;
 
 }
 
@@ -1492,10 +2035,12 @@ function m5Bear(c) {
 
 
 /* ================================================================
-   BODY RATIO
+   BODY
 ================================================================ */
 
-function bodyRatio(candle) {
+function bodyRatio(
+  candle
+) {
 
   const range =
     candle.high -
@@ -1505,7 +2050,9 @@ function bodyRatio(candle) {
   if (
     range <= 0
   ) {
+
     return 0;
+
   }
 
 
@@ -1617,7 +2164,7 @@ function recentPullback(
       side === 1
     ) {
 
-      const touch =
+      const touched =
         candle.low <=
         candle.ema20 +
         tolerance;
@@ -1631,7 +2178,7 @@ function recentPullback(
 
 
       if (
-        touch &&
+        touched &&
         depthOkay
       ) {
 
@@ -1641,7 +2188,7 @@ function recentPullback(
 
     } else {
 
-      const touch =
+      const touched =
         candle.high >=
         candle.ema20 -
         tolerance;
@@ -1655,7 +2202,7 @@ function recentPullback(
 
 
       if (
-        touch &&
+        touched &&
         depthOkay
       ) {
 
@@ -1674,7 +2221,7 @@ function recentPullback(
 
 
 /* ================================================================
-   SCORE
+   SETUP SCORE
 ================================================================ */
 
 function setupScore(
@@ -1685,6 +2232,11 @@ function setupScore(
 
   let score = 0;
 
+
+  /*
+   * Macro regime
+   * 25
+   */
 
   if (
     side === 1
@@ -1702,6 +2254,11 @@ function setupScore(
   }
 
 
+  /*
+   * Primary trend
+   * 25
+   */
+
   if (
     side === 1
       ? h1Bull(
@@ -1717,6 +2274,11 @@ function setupScore(
 
   }
 
+
+  /*
+   * Local trend
+   * 20
+   */
 
   if (
     side === 1
@@ -1734,9 +2296,17 @@ function setupScore(
   }
 
 
+  /*
+   * Trend strength
+   * 10
+   */
+
   if (
+    Number.isFinite(
+      context.m15.adx14
+    ) &&
     context.m15.adx14 >=
-    settings.minADX
+      settings.minADX
   ) {
 
     score +=
@@ -1744,6 +2314,11 @@ function setupScore(
 
   }
 
+
+  /*
+   * Execution trend
+   * 10
+   */
 
   if (
     side === 1
@@ -1761,10 +2336,17 @@ function setupScore(
   }
 
 
+  /*
+   * Slope agreement
+   * 10
+   */
+
   if (
     side === 1 &&
-    context.h1.slope20 > 0 &&
-    context.m15.slope20 > 0
+    context.h1.slope20 >
+      0 &&
+    context.m15.slope20 >
+      0
   ) {
 
     score +=
@@ -1775,8 +2357,10 @@ function setupScore(
 
   if (
     side === -1 &&
-    context.h1.slope20 < 0 &&
-    context.m15.slope20 < 0
+    context.h1.slope20 <
+      0 &&
+    context.m15.slope20 <
+      0
   ) {
 
     score +=
@@ -1791,7 +2375,7 @@ function setupScore(
 
 
 /* ================================================================
-   CONTINUATION ENTRY
+   CONTINUATION
 ================================================================ */
 
 function continuationPass(
@@ -1882,7 +2466,9 @@ function getSignal(
   if (
     index < 10
   ) {
+
     return null;
+
   }
 
 
@@ -1893,8 +2479,14 @@ function getSignal(
     );
 
 
-  if (!context) {
+  if (
+    !validContext(
+      context
+    )
+  ) {
+
     return null;
+
   }
 
 
@@ -1925,12 +2517,20 @@ function getSignal(
   }
 
 
+  /*
+   * Session.
+   */
+
   if (
     settings.useSession &&
     !inSession(
+
       current.ts,
+
       settings.sessionStart,
+
       settings.sessionEnd
+
     )
   ) {
 
@@ -1938,6 +2538,10 @@ function getSignal(
 
   }
 
+
+  /*
+   * Volatility.
+   */
 
   const atrPct =
     (
@@ -1999,10 +2603,15 @@ function getSignal(
 
     const continuation =
       continuationPass(
+
         current,
+
         previous,
+
         1,
+
         settings
+
       );
 
 
@@ -2028,7 +2637,9 @@ function getSignal(
 
         side: 1,
 
-        score
+        score,
+
+        context
 
       };
 
@@ -2079,10 +2690,15 @@ function getSignal(
 
     const continuation =
       continuationPass(
+
         current,
+
         previous,
+
         -1,
+
         settings
+
       );
 
 
@@ -2108,7 +2724,9 @@ function getSignal(
 
         side: -1,
 
-        score
+        score,
+
+        context
 
       };
 
@@ -2123,7 +2741,7 @@ function getSignal(
 
 
 /* ================================================================
-   STOP
+   STRUCTURAL STOP
 ================================================================ */
 
 function calculateStop(
@@ -2145,7 +2763,9 @@ function calculateStop(
       signal.atr14
     )
   ) {
+
     return null;
+
   }
 
 
@@ -2162,11 +2782,15 @@ function calculateStop(
     );
 
 
+  /* ============================================================
+     BUY
+  ============================================================ */
+
   if (
     side === 1
   ) {
 
-    let swing =
+    let swingLow =
       Infinity;
 
 
@@ -2176,9 +2800,9 @@ function calculateStop(
       i++
     ) {
 
-      swing =
+      swingLow =
         Math.min(
-          swing,
+          swingLow,
           candles[i].low
         );
 
@@ -2186,7 +2810,7 @@ function calculateStop(
 
 
     let stop =
-      swing -
+      swingLow -
       atrValue *
       settings.structureBufferATR;
 
@@ -2214,6 +2838,7 @@ function calculateStop(
       distance =
         minimum;
 
+
       stop =
         entry -
         distance;
@@ -2225,13 +2850,16 @@ function calculateStop(
       distance >
       maximum
     ) {
+
       return null;
+
     }
 
 
     return {
 
       stop,
+
       distance
 
     };
@@ -2239,7 +2867,11 @@ function calculateStop(
   }
 
 
-  let swing =
+  /* ============================================================
+     SELL
+  ============================================================ */
+
+  let swingHigh =
     -Infinity;
 
 
@@ -2249,9 +2881,9 @@ function calculateStop(
     i++
   ) {
 
-    swing =
+    swingHigh =
       Math.max(
-        swing,
+        swingHigh,
         candles[i].high
       );
 
@@ -2259,7 +2891,7 @@ function calculateStop(
 
 
   let stop =
-    swing +
+    swingHigh +
     atrValue *
     settings.structureBufferATR;
 
@@ -2287,6 +2919,7 @@ function calculateStop(
     distance =
       minimum;
 
+
     stop =
       entry +
       distance;
@@ -2298,13 +2931,16 @@ function calculateStop(
     distance >
     maximum
   ) {
+
     return null;
+
   }
 
 
   return {
 
     stop,
+
     distance
 
   };
@@ -2313,7 +2949,7 @@ function calculateStop(
 
 
 /* ================================================================
-   SIMULATION
+   TRADE SIMULATION
 ================================================================ */
 
 function simulateTrade(
@@ -2324,7 +2960,8 @@ function simulateTrade(
 ) {
 
   const entryIndex =
-    signalIndex + 1;
+    signalIndex +
+    1;
 
 
   if (
@@ -2337,10 +2974,14 @@ function simulateTrade(
   }
 
 
-  const entry =
+  const entryBar =
     data.m5[
       entryIndex
-    ].open;
+    ];
+
+
+  const entry =
+    entryBar.open;
 
 
   const stopInfo =
@@ -2360,7 +3001,9 @@ function simulateTrade(
 
 
   if (!stopInfo) {
+
     return null;
+
   }
 
 
@@ -2382,7 +3025,7 @@ function simulateTrade(
         settings.targetR;
 
 
-  const beTrigger =
+  const breakevenTrigger =
     signal.side === 1
       ? entry +
         riskDistance *
@@ -2396,14 +3039,15 @@ function simulateTrade(
     originalStop;
 
 
-  let beActive =
+  let breakevenActive =
     false;
 
 
-  const maxIndex =
+  const finalIndex =
     Math.min(
 
-      data.m5.length - 1,
+      data.m5.length -
+      1,
 
       entryIndex +
       settings.maxHoldBars
@@ -2412,12 +3056,12 @@ function simulateTrade(
 
 
   let exitIndex =
-    maxIndex;
+    finalIndex;
 
 
   let exitPrice =
     data.m5[
-      exitIndex
+      finalIndex
     ].close;
 
 
@@ -2431,29 +3075,38 @@ function simulateTrade(
 
   for (
     let i = entryIndex;
-    i <= maxIndex;
+    i <= finalIndex;
     i++
   ) {
 
-    const candle =
+    const bar =
       data.m5[i];
 
 
-    /* BUY */
+    /* ============================================================
+       LONG
+    ============================================================ */
 
     if (
       signal.side === 1
     ) {
 
       const stopHit =
-        candle.low <=
+        bar.low <=
         activeStop;
 
 
       const targetHit =
-        candle.high >=
+        bar.high >=
         target;
 
+
+      /*
+       * Conservative ordering.
+       *
+       * If both are reached within
+       * one M5 candle, assume SL first.
+       */
 
       if (
         stopHit
@@ -2462,18 +3115,22 @@ function simulateTrade(
         exitIndex =
           i;
 
+
         exitPrice =
           activeStop;
 
+
         rawR =
-          beActive
+          breakevenActive
             ? 0
             : -1;
 
+
         result =
-          beActive
+          breakevenActive
             ? "BE"
             : "SL";
+
 
         break;
 
@@ -2487,29 +3144,39 @@ function simulateTrade(
         exitIndex =
           i;
 
+
         exitPrice =
           target;
+
 
         rawR =
           settings.targetR;
 
+
         result =
           "TP";
+
 
         break;
 
       }
 
 
+      /*
+       * Breakeven becomes active
+       * for subsequent candles.
+       */
+
       if (
         settings.useBreakeven &&
-        !beActive &&
-        candle.high >=
-          beTrigger
+        !breakevenActive &&
+        bar.high >=
+          breakevenTrigger
       ) {
 
-        beActive =
+        breakevenActive =
           true;
+
 
         activeStop =
           entry;
@@ -2519,17 +3186,19 @@ function simulateTrade(
     }
 
 
-    /* SELL */
+    /* ============================================================
+       SHORT
+    ============================================================ */
 
     else {
 
       const stopHit =
-        candle.high >=
+        bar.high >=
         activeStop;
 
 
       const targetHit =
-        candle.low <=
+        bar.low <=
         target;
 
 
@@ -2540,18 +3209,22 @@ function simulateTrade(
         exitIndex =
           i;
 
+
         exitPrice =
           activeStop;
 
+
         rawR =
-          beActive
+          breakevenActive
             ? 0
             : -1;
 
+
         result =
-          beActive
+          breakevenActive
             ? "BE"
             : "SL";
+
 
         break;
 
@@ -2565,14 +3238,18 @@ function simulateTrade(
         exitIndex =
           i;
 
+
         exitPrice =
           target;
+
 
         rawR =
           settings.targetR;
 
+
         result =
           "TP";
+
 
         break;
 
@@ -2581,13 +3258,14 @@ function simulateTrade(
 
       if (
         settings.useBreakeven &&
-        !beActive &&
-        candle.low <=
-          beTrigger
+        !breakevenActive &&
+        bar.low <=
+          breakevenTrigger
       ) {
 
-        beActive =
+        breakevenActive =
           true;
+
 
         activeStop =
           entry;
@@ -2598,6 +3276,10 @@ function simulateTrade(
 
   }
 
+
+  /*
+   * Time-based close.
+   */
 
   if (
     rawR === null
@@ -2649,9 +3331,7 @@ function simulateTrade(
 
     entryTime:
       new Date(
-        data.m5[
-          entryIndex
-        ].ts
+        entryBar.ts
       ).toISOString(),
 
     exitTime:
@@ -2685,6 +3365,12 @@ function simulateTrade(
         4
       ),
 
+    riskDistance:
+      round(
+        riskDistance,
+        4
+      ),
+
     rawR:
       round(
         rawR,
@@ -2713,9 +3399,10 @@ function simulateTrade(
    METRICS
 ================================================================ */
 
-function metrics(
+function calculateMetrics(
   trades,
-  settings
+  settings,
+  includeCurve = true
 ) {
 
   let wins = 0;
@@ -2728,7 +3415,8 @@ function metrics(
 
   let sells = 0;
 
-  let grossWinR = 0;
+
+  let grossProfitR = 0;
 
   let grossLossR = 0;
 
@@ -2747,19 +3435,20 @@ function metrics(
     0;
 
 
-  const equityCurve = [
+  const equityCurve =
+    includeCurve
+      ? [
+          {
+            trade: 0,
 
-    {
-      trade: 0,
-
-      equity:
-        round(
-          equity,
-          2
-        )
-    }
-
-  ];
+            equity:
+              round(
+                equity,
+                2
+              )
+          }
+        ]
+      : [];
 
 
   for (
@@ -2794,30 +3483,58 @@ function metrics(
     }
 
 
+    /*
+     * Trade classifications.
+     */
+
     if (
+      trade.result ===
+      "BE"
+    ) {
+
+      breakevens++;
+
+    } else if (
       r > 0
     ) {
 
       wins++;
 
-      grossWinR +=
+    } else {
+
+      losses++;
+
+    }
+
+
+    /*
+     * PF includes all real costs.
+     *
+     * Therefore a BE trade with
+     * -0.04R cost still contributes
+     * to gross loss.
+     */
+
+    if (
+      r > 0
+    ) {
+
+      grossProfitR +=
         r;
 
     } else if (
       r < 0
     ) {
 
-      losses++;
-
       grossLossR +=
         Math.abs(r);
 
-    } else {
-
-      breakevens++;
-
     }
 
+
+    /*
+     * Fixed fractional equity.
+     */
 
     equity *=
       1 +
@@ -2835,36 +3552,44 @@ function metrics(
       );
 
 
-    const dd =
-      (
-        (
-          peak -
-          equity
-        ) /
-        peak
-      ) *
-      100;
+    const drawdown =
+      peak > 0
+        ? (
+            (
+              peak -
+              equity
+            ) /
+            peak
+          ) *
+          100
+        : 0;
 
 
     maxDrawdown =
       Math.max(
         maxDrawdown,
-        dd
+        drawdown
       );
 
 
-    equityCurve.push({
+    if (
+      includeCurve
+    ) {
 
-      trade:
-        i + 1,
+      equityCurve.push({
 
-      equity:
-        round(
-          equity,
-          2
-        )
+        trade:
+          i + 1,
 
-    });
+        equity:
+          round(
+            equity,
+            2
+          )
+
+      });
+
+    }
 
   }
 
@@ -2874,38 +3599,42 @@ function metrics(
 
 
   const winRate =
-    count
-      ? wins /
-        count *
+    count > 0
+      ? (
+          wins /
+          count
+        ) *
         100
       : 0;
 
 
-  const pf =
+  const profitFactor =
     grossLossR > 0
-      ? grossWinR /
+      ? grossProfitR /
         grossLossR
-      : grossWinR > 0
+      : grossProfitR > 0
         ? 99
         : 0;
 
 
   const expectancy =
-    count
+    count > 0
       ? totalR /
         count
       : 0;
 
 
   const returnPct =
-    (
-      (
-        equity -
-        settings.initialBalance
-      ) /
-      settings.initialBalance
-    ) *
-    100;
+    settings.initialBalance > 0
+      ? (
+          (
+            equity -
+            settings.initialBalance
+          ) /
+          settings.initialBalance
+        ) *
+        100
+      : 0;
 
 
   return {
@@ -2931,7 +3660,7 @@ function metrics(
 
     profitFactor:
       round(
-        pf,
+        profitFactor,
         2
       ),
 
@@ -2979,17 +3708,64 @@ function metrics(
 
 
 /* ================================================================
-   GRADE
+   SUMMARY WITHOUT CURVE
 ================================================================ */
 
-function grade(
-  all,
-  validation
+function compactMetrics(
+  metrics
 ) {
 
+  return {
+
+    trades:
+      metrics.trades,
+
+    wins:
+      metrics.wins,
+
+    losses:
+      metrics.losses,
+
+    breakevens:
+      metrics.breakevens,
+
+    winRate:
+      metrics.winRate,
+
+    profitFactor:
+      metrics.profitFactor,
+
+    expectancyR:
+      metrics.expectancyR,
+
+    totalR:
+      metrics.totalR,
+
+    maxDrawdown:
+      metrics.maxDrawdown
+
+  };
+
+}
+
+
+/* ================================================================
+   STRATEGY GRADE
+================================================================ */
+
+function gradeStrategy(
+  overall,
+  validation,
+  direction
+) {
+
+  /*
+   * Small total sample.
+   */
+
   if (
-    all.trades <
-    20
+    overall.trades <
+    30
   ) {
 
     return {
@@ -2998,27 +3774,58 @@ function grade(
         "N/A",
 
       verdict:
-        "Sample still too small"
+        "Not enough total trades yet"
 
     };
 
   }
 
 
+  /*
+   * Validation too small.
+   */
+
   if (
-    all.trades >= 40 &&
-    all.profitFactor >=
-      1.4 &&
-    all.expectancyR >=
+    validation.trades <
+    8
+  ) {
+
+    return {
+
+      grade:
+        "P",
+
+      verdict:
+        "Promising, but holdout sample is still too small"
+
+    };
+
+  }
+
+
+  /*
+   * One-sided regime warning.
+   */
+
+  const oneSided =
+    direction.long.trades === 0 ||
+    direction.short.trades === 0;
+
+
+  if (
+    overall.trades >= 60 &&
+    validation.trades >= 15 &&
+    overall.profitFactor >=
+      1.40 &&
+    overall.expectancyR >=
       0.15 &&
-    all.maxDrawdown <=
-      12 &&
-    validation.trades >=
-      8 &&
     validation.profitFactor >=
-      1.10 &&
+      1.15 &&
     validation.expectancyR >
-      0
+      0 &&
+    overall.maxDrawdown <=
+      12 &&
+    !oneSided
   ) {
 
     return {
@@ -3027,7 +3834,7 @@ function grade(
         "A",
 
       verdict:
-        "Strong historical result"
+        "Strong historical result across both directions"
 
     };
 
@@ -3035,13 +3842,16 @@ function grade(
 
 
   if (
-    all.trades >= 25 &&
-    all.profitFactor >=
-      1.2 &&
-    all.expectancyR >=
+    overall.trades >= 40 &&
+    validation.trades >= 10 &&
+    overall.profitFactor >=
+      1.20 &&
+    overall.expectancyR >=
       0.08 &&
     validation.expectancyR >=
-      0
+      0 &&
+    overall.maxDrawdown <=
+      16
   ) {
 
     return {
@@ -3050,7 +3860,9 @@ function grade(
         "B",
 
       verdict:
-        "Promising historical edge"
+        oneSided
+          ? "Positive edge, but still concentrated in one market regime"
+          : "Promising historical edge"
 
     };
 
@@ -3058,9 +3870,9 @@ function grade(
 
 
   if (
-    all.profitFactor >
+    overall.profitFactor >
       1.05 &&
-    all.expectancyR >
+    overall.expectancyR >
       0
   ) {
 
@@ -3070,7 +3882,7 @@ function grade(
         "C",
 
       verdict:
-        "Positive but not yet robust"
+        "Positive overall, but robustness is not yet proven"
 
     };
 
@@ -3083,7 +3895,7 @@ function grade(
       "D",
 
     verdict:
-      "Weak historical result"
+      "No reliable historical edge"
 
   };
 
@@ -3091,45 +3903,101 @@ function grade(
 
 
 /* ================================================================
-   RUN MODE
+   DEVELOPMENT SELECTION SCORE
+================================================================ */
+
+/*
+ * CRITICAL:
+ *
+ * This score is calculated ONLY
+ * from development data.
+ *
+ * Validation data is completely ignored
+ * when selecting the best mode.
+ */
+
+function developmentSelectionScore(
+  metrics
+) {
+
+  if (
+    metrics.trades <
+    10
+  ) {
+
+    return (
+      -100 +
+      metrics.trades
+    );
+
+  }
+
+
+  return (
+
+    metrics.expectancyR *
+      32
+
+    +
+
+    Math.min(
+      metrics.profitFactor,
+      3
+    ) *
+      9
+
+    +
+
+    Math.min(
+      metrics.trades,
+      120
+    ) *
+      0.12
+
+    -
+
+    metrics.maxDrawdown *
+      1.35
+
+  );
+
+}
+
+
+/* ================================================================
+   RUN ONE MODE
 ================================================================ */
 
 function runMode(
   data,
+  startIndex,
   settings
 ) {
-
-  const startIndex =
-    Math.max(
-      220,
-      data.m5.length -
-      settings.testBars
-    );
-
 
   const trades = [];
 
 
-  let i =
+  let index =
     startIndex;
 
 
   while (
-    i <
-    data.m5.length - 1
+    index <
+    data.m5.length -
+    1
   ) {
 
     const signal =
       getSignal(
         data,
-        i,
+        index,
         settings
       );
 
 
     if (!signal) {
 
-      i++;
+      index++;
 
       continue;
 
@@ -3138,16 +4006,21 @@ function runMode(
 
     const trade =
       simulateTrade(
+
         data,
-        i,
+
+        index,
+
         signal,
+
         settings
+
       );
 
 
     if (!trade) {
 
-      i++;
+      index++;
 
       continue;
 
@@ -3159,7 +4032,11 @@ function runMode(
     );
 
 
-    i =
+    /*
+     * One position at a time.
+     */
+
+    index =
       trade.exitIndex +
       settings.cooldownBars +
       1;
@@ -3180,7 +4057,7 @@ function runMode(
     ].closeTs;
 
 
-  const split =
+  const splitTime =
     startTime +
     (
       endTime -
@@ -3195,7 +4072,7 @@ function runMode(
         Date.parse(
           trade.entryTime
         ) <
-        split
+        splitTime
     );
 
 
@@ -3205,35 +4082,82 @@ function runMode(
         Date.parse(
           trade.entryTime
         ) >=
-        split
+        splitTime
     );
 
 
-  const all =
-    metrics(
+  const longTrades =
+    trades.filter(
+      trade =>
+        trade.side ===
+        "BUY"
+    );
+
+
+  const shortTrades =
+    trades.filter(
+      trade =>
+        trade.side ===
+        "SELL"
+    );
+
+
+  const overall =
+    calculateMetrics(
       trades,
-      settings
+      settings,
+      true
     );
 
 
   const development =
-    metrics(
+    calculateMetrics(
       developmentTrades,
-      settings
+      settings,
+      false
     );
 
 
   const validation =
-    metrics(
+    calculateMetrics(
       validationTrades,
-      settings
+      settings,
+      false
     );
 
 
-  const resultGrade =
-    grade(
-      all,
-      validation
+  const direction = {
+
+    long:
+      compactMetrics(
+
+        calculateMetrics(
+          longTrades,
+          settings,
+          false
+        )
+
+      ),
+
+    short:
+      compactMetrics(
+
+        calculateMetrics(
+          shortTrades,
+          settings,
+          false
+        )
+
+      )
+
+  };
+
+
+  const grade =
+    gradeStrategy(
+      overall,
+      validation,
+      direction
     );
 
 
@@ -3242,15 +4166,33 @@ function runMode(
     mode:
       settings.mode,
 
+    settings,
+
+    splitTime:
+      new Date(
+        splitTime
+      ).toISOString(),
+
+    selectionScore:
+      round(
+
+        developmentSelectionScore(
+          development
+        ),
+
+        3
+
+      ),
+
     metrics: {
 
-      ...all,
+      ...overall,
 
       grade:
-        resultGrade.grade,
+        grade.grade,
 
       verdict:
-        resultGrade.verdict
+        grade.verdict
 
     },
 
@@ -3258,9 +4200,7 @@ function runMode(
 
     validation,
 
-    splitTime:
-      new Date(split)
-        .toISOString(),
+    direction,
 
     trades
 
@@ -3270,7 +4210,7 @@ function runMode(
 
 
 /* ================================================================
-   PRESETS
+   STRATEGY MODES
 ================================================================ */
 
 function presets(
@@ -3278,7 +4218,6 @@ function presets(
 ) {
 
   return [
-
 
     /* ============================================================
        STRICT
@@ -3335,6 +4274,10 @@ function presets(
 
     /* ============================================================
        BALANCED
+
+       IMPORTANT:
+       This keeps the V1.2 rules that
+       produced the current 35-trade result.
     ============================================================ */
 
     {
@@ -3444,15 +4387,179 @@ function presets(
 
 
 /* ================================================================
-   LATEST MARKET
+   CURRENT TIMEFRAME STATE
+================================================================ */
+
+function timeframeState(
+  candle,
+  type
+) {
+
+  let direction =
+    "MIXED";
+
+
+  if (
+    type === "H4"
+  ) {
+
+    if (
+      h4Bull(candle)
+    ) {
+
+      direction =
+        "BULLISH";
+
+    }
+
+
+    if (
+      h4Bear(candle)
+    ) {
+
+      direction =
+        "BEARISH";
+
+    }
+
+  }
+
+
+  if (
+    type === "H1"
+  ) {
+
+    if (
+      h1Bull(candle)
+    ) {
+
+      direction =
+        "BULLISH";
+
+    }
+
+
+    if (
+      h1Bear(candle)
+    ) {
+
+      direction =
+        "BEARISH";
+
+    }
+
+  }
+
+
+  if (
+    type === "M15"
+  ) {
+
+    if (
+      m15Bull(candle)
+    ) {
+
+      direction =
+        "BULLISH";
+
+    }
+
+
+    if (
+      m15Bear(candle)
+    ) {
+
+      direction =
+        "BEARISH";
+
+    }
+
+  }
+
+
+  if (
+    type === "M5"
+  ) {
+
+    if (
+      m5Bull(candle)
+    ) {
+
+      direction =
+        "BULLISH";
+
+    }
+
+
+    if (
+      m5Bear(candle)
+    ) {
+
+      direction =
+        "BEARISH";
+
+    }
+
+  }
+
+
+  return {
+
+    direction,
+
+    price:
+      round(
+        candle.close,
+        2
+      ),
+
+    ema20:
+      round(
+        candle.ema20,
+        2
+      ),
+
+    ema50:
+      round(
+        candle.ema50,
+        2
+      ),
+
+    ema200:
+      round(
+        candle.ema200,
+        2
+      ),
+
+    rsi:
+      round(
+        candle.rsi14,
+        1
+      ),
+
+    adx:
+      round(
+        candle.adx14,
+        1
+      )
+
+  };
+
+}
+
+
+/* ================================================================
+   LATEST MARKET STATE
 ================================================================ */
 
 function latestState(
-  data
+  data,
+  modeSettings
 ) {
 
   const index =
-    data.m5.length - 1;
+    data.m5.length -
+    1;
 
 
   const context =
@@ -3462,8 +4569,14 @@ function latestState(
     );
 
 
-  if (!context) {
+  if (
+    !validContext(
+      context
+    )
+  ) {
+
     return null;
+
   }
 
 
@@ -3501,151 +4614,45 @@ function latestState(
   }
 
 
-  const state =
-    (
-      candle,
-      type
-    ) => {
-
-      let direction =
-        "MIXED";
+  const liveModes =
+    [];
 
 
-      if (
-        type ===
-        "H4"
-      ) {
+  for (
+    const settings of
+    modeSettings
+  ) {
 
-        if (
-          h4Bull(candle)
-        ) {
-          direction =
-            "BULLISH";
-        }
-
-
-        if (
-          h4Bear(candle)
-        ) {
-          direction =
-            "BEARISH";
-        }
-
-      }
+    const signal =
+      getSignal(
+        data,
+        index,
+        settings
+      );
 
 
-      if (
-        type ===
-        "H1"
-      ) {
+    liveModes.push({
 
-        if (
-          h1Bull(candle)
-        ) {
-          direction =
-            "BULLISH";
-        }
+      mode:
+        settings.mode,
 
+      signal:
+        signal
+          ? (
+              signal.side === 1
+                ? "BUY"
+                : "SELL"
+            )
+          : "WAIT",
 
-        if (
-          h1Bear(candle)
-        ) {
-          direction =
-            "BEARISH";
-        }
+      score:
+        signal
+          ? signal.score
+          : null
 
-      }
+    });
 
-
-      if (
-        type ===
-        "M15"
-      ) {
-
-        if (
-          m15Bull(candle)
-        ) {
-          direction =
-            "BULLISH";
-        }
-
-
-        if (
-          m15Bear(candle)
-        ) {
-          direction =
-            "BEARISH";
-        }
-
-      }
-
-
-      if (
-        type ===
-        "M5"
-      ) {
-
-        if (
-          m5Bull(candle)
-        ) {
-          direction =
-            "BULLISH";
-        }
-
-
-        if (
-          m5Bear(candle)
-        ) {
-          direction =
-            "BEARISH";
-        }
-
-      }
-
-
-      return {
-
-        direction,
-
-        price:
-          round(
-            candle.close,
-            2
-          ),
-
-        ema20:
-          round(
-            candle.ema20,
-            2
-          ),
-
-        ema50:
-          round(
-            candle.ema50,
-            2
-          ),
-
-        ema200:
-          round(
-            candle.ema200,
-            2
-          ),
-
-        rsi:
-          round(
-            candle.rsi14,
-            1
-          ),
-
-        adx:
-          round(
-            candle.adx14,
-            1
-          )
-
-      };
-
-    };
+  }
 
 
   return {
@@ -3655,30 +4662,38 @@ function latestState(
         context.m5.closeTs
       ).toISOString(),
 
+    price:
+      round(
+        context.m5.close,
+        2
+      ),
+
     bias,
+
+    liveModes,
 
     timeframes: {
 
       m5:
-        state(
+        timeframeState(
           context.m5,
           "M5"
         ),
 
       m15:
-        state(
+        timeframeState(
           context.m15,
           "M15"
         ),
 
       h1:
-        state(
+        timeframeState(
           context.h1,
           "H1"
         ),
 
       h4:
-        state(
+        timeframeState(
           context.h4,
           "H4"
         )
@@ -3696,7 +4711,7 @@ function latestState(
 
 let CACHE = {
 
-  key: null,
+  targetBars: null,
 
   expires: 0,
 
@@ -3710,61 +4725,15 @@ let CACHE = {
 ================================================================ */
 
 async function loadData(
-  testBars
+  targetBars
 ) {
 
-  const m5Size =
-    Math.min(
-      5000,
-      testBars + 300
-    );
-
-
-  const m15Size =
-    Math.min(
-      5000,
-      Math.ceil(
-        m5Size / 3
-      ) +
-      300
-    );
-
-
-  const h1Size =
-    Math.min(
-      5000,
-      Math.ceil(
-        m5Size / 12
-      ) +
-      300
-    );
-
-
-  const h4Size =
-    Math.max(
-      450,
-      Math.ceil(
-        m5Size / 48
-      ) +
-      300
-    );
-
-
-  const key =
-    [
-      m5Size,
-      m15Size,
-      h1Size,
-      h4Size
-    ].join("-");
-
-
   if (
-    CACHE.key ===
-      key &&
+    CACHE.data &&
+    CACHE.targetBars ===
+      targetBars &&
     CACHE.expires >
-      Date.now() &&
-    CACHE.data
+      Date.now()
   ) {
 
     return CACHE.data;
@@ -3772,61 +4741,37 @@ async function loadData(
   }
 
 
-  const [
-    m5,
-    m15,
-    h1,
-    h4
-  ] =
-    await Promise.all([
-
-      fetchSeries(
-        "m5",
-        m5Size
-      ),
-
-      fetchSeries(
-        "m15",
-        m15Size
-      ),
-
-      fetchSeries(
-        "h1",
-        h1Size
-      ),
-
-      fetchSeries(
-        "h4",
-        h4Size
-      )
-
-    ]);
+  const rawM5 =
+    await fetchM5History(
+      targetBars
+    );
 
 
-  const data = {
+  if (
+    rawM5.length <
+    1000
+  ) {
 
-    m5:
-      decorate(m5),
+    throw new Error(
+      `Only ${rawM5.length} M5 candles were returned.`
+    );
 
-    m15:
-      decorate(m15),
+  }
 
-    h1:
-      decorate(h1),
 
-    h4:
-      decorate(h4)
-
-  };
+  const data =
+    buildData(
+      rawM5
+    );
 
 
   CACHE = {
 
-    key,
+    targetBars,
 
     expires:
       Date.now() +
-      45000,
+      60000,
 
     data
 
@@ -3839,7 +4784,7 @@ async function loadData(
 
 
 /* ================================================================
-   HANDLER
+   API HANDLER
 ================================================================ */
 
 export default async function handler(
@@ -3849,7 +4794,13 @@ export default async function handler(
 
   res.setHeader(
     "Cache-Control",
-    "no-store, max-age=0"
+    "no-store, no-cache, must-revalidate"
+  );
+
+
+  res.setHeader(
+    "Content-Type",
+    "application/json; charset=utf-8"
   );
 
 
@@ -3865,7 +4816,7 @@ export default async function handler(
         ok: false,
 
         error:
-          "GET only"
+          "GET requests only."
 
       });
 
@@ -3881,7 +4832,7 @@ export default async function handler(
         ok: false,
 
         error:
-          "Missing TWELVE_DATA_API_KEY_4"
+          "Missing TWELVE_DATA_API_KEY_4."
 
       });
 
@@ -3894,260 +4845,322 @@ export default async function handler(
       req.query || {};
 
 
-    const base = {
+    /* ============================================================
+       USER / BASE SETTINGS
+    ============================================================ */
 
-      testBars:
-        integerParam(
-          q.bars,
-          4500,
-          1000,
-          4700
-        ),
-
-
-      targetR:
-        numberParam(
-          q.targetR,
-          1.8,
-          0.5,
-          6
-        ),
-
-
-      useBreakeven:
-        boolParam(
-          q.useBreakeven,
-          true
-        ),
-
-
-      breakevenR:
-        numberParam(
-          q.breakevenR,
-          1.0,
-          0.25,
-          4
-        ),
-
-
-      swingLookback:
-        integerParam(
-          q.swingLookback,
-          6,
-          2,
-          30
-        ),
-
-
-      structureBufferATR:
-        numberParam(
-          q.structureBufferATR,
-          0.15,
-          0,
-          2
-        ),
-
-
-      minStopATR:
-        numberParam(
-          q.minStopATR,
-          0.80,
-          0.2,
-          5
-        ),
-
-
-      maxStopATR:
-        numberParam(
-          q.maxStopATR,
-          2.0,
-          0.5,
-          8
-        ),
-
-
-      maxHoldBars:
-        integerParam(
-          q.maxHoldBars,
-          48,
-          5,
-          300
-        ),
-
-
-      minAtrPct:
-        numberParam(
-          q.minAtrPct,
-          0.015,
-          0,
-          2
-        ),
-
-
-      useSession:
-        boolParam(
-          q.useSession,
-          true
-        ),
-
-
-      sessionStart:
-        integerParam(
-          q.sessionStart,
-          5,
-          0,
-          23
-        ),
-
-
-      sessionEnd:
-        integerParam(
-          q.sessionEnd,
-          19,
-          0,
-          23
-        ),
-
-
-      initialBalance:
-        numberParam(
-          q.initialBalance,
-          10000,
-          100,
-          100000000
-        ),
-
-
-      riskPct:
-        numberParam(
-          q.riskPct,
-          0.5,
-          0.01,
-          10
-        ),
-
-
-      costR:
-        numberParam(
-          q.costR,
-          0.04,
-          0,
-          0.5
-        )
-
-    };
-
-
-    const data =
-      await loadData(
-        base.testBars
+    const requestedTestBars =
+      integerParam(
+        q.bars,
+        9000,
+        3000,
+        15000
       );
 
 
-    const modeResults = [];
+    const targetR =
+      numberParam(
+        q.targetR,
+        1.8,
+        0.5,
+        5
+      );
 
 
-    for (
-      const settings of
-      presets(base)
+    const riskPct =
+      numberParam(
+        q.riskPct,
+        0.5,
+        0.01,
+        5
+      );
+
+
+    const costR =
+      numberParam(
+        q.costR,
+        0.04,
+        0,
+        0.5
+      );
+
+
+    const useBreakeven =
+      boolParam(
+        q.useBreakeven,
+        true
+      );
+
+
+    const breakevenR =
+      numberParam(
+        q.breakevenR,
+        1.0,
+        0.25,
+        3
+      );
+
+
+    const sessionStart =
+      integerParam(
+        q.sessionStart,
+        5,
+        0,
+        23
+      );
+
+
+    const sessionEnd =
+      integerParam(
+        q.sessionEnd,
+        19,
+        0,
+        23
+      );
+
+
+    const useSession =
+      boolParam(
+        q.useSession,
+        true
+      );
+
+
+    const initialBalance =
+      numberParam(
+        q.initialBalance,
+        10000,
+        100,
+        100000000
+      );
+
+
+    const targetHistoryBars =
+      Math.min(
+
+        requestedTestBars +
+        WARMUP_M5_BARS,
+
+        CHUNK_SIZE *
+        MAX_CHUNKS
+
+      );
+
+
+    /* ============================================================
+       LOAD HISTORY
+    ============================================================ */
+
+    const data =
+      await loadData(
+        targetHistoryBars
+      );
+
+
+    const validStart =
+      firstValidIndex(
+        data
+      );
+
+
+    if (
+      validStart <
+      0
     ) {
 
-      modeResults.push(
-        runMode(
-          data,
-          settings
-        )
+      throw new Error(
+        "Could not build enough H4 history for EMA200."
       );
 
     }
 
 
     /*
-     * Rank primarily by robustness,
-     * not only raw total R.
+     * Test only the requested latest bars,
+     * while preserving the earlier candles
+     * for indicator warm-up.
      */
-
-    modeResults.sort(
-      (
-        a,
-        b
-      ) => {
-
-        const scoreA =
-          (
-            a.validation
-              .expectancyR *
-              30
-          ) +
-          (
-            Math.min(
-              a.metrics
-                .profitFactor,
-              4
-            ) *
-              8
-          ) +
-          (
-            Math.min(
-              a.metrics.trades,
-              60
-            ) *
-              0.25
-          ) -
-          (
-            a.metrics
-              .maxDrawdown *
-              1.5
-          );
-
-
-        const scoreB =
-          (
-            b.validation
-              .expectancyR *
-              30
-          ) +
-          (
-            Math.min(
-              b.metrics
-                .profitFactor,
-              4
-            ) *
-              8
-          ) +
-          (
-            Math.min(
-              b.metrics.trades,
-              60
-            ) *
-              0.25
-          ) -
-          (
-            b.metrics
-              .maxDrawdown *
-              1.5
-          );
-
-
-        return (
-          scoreB -
-          scoreA
-        );
-
-      }
-    );
-
-
-    const best =
-      modeResults[0];
-
 
     const startIndex =
       Math.max(
-        220,
+
+        validStart,
+
         data.m5.length -
-        base.testBars
+        requestedTestBars
+
       );
+
+
+    if (
+      startIndex >=
+      data.m5.length -
+      50
+    ) {
+
+      throw new Error(
+        "Not enough valid evaluation history after EMA warm-up."
+      );
+
+    }
+
+
+    const base = {
+
+      testBars:
+        data.m5.length -
+        startIndex,
+
+      targetR,
+
+      useBreakeven,
+
+      breakevenR,
+
+      swingLookback:
+        6,
+
+      structureBufferATR:
+        0.15,
+
+      minStopATR:
+        0.80,
+
+      maxStopATR:
+        2.0,
+
+      maxHoldBars:
+        48,
+
+      minAtrPct:
+        0.015,
+
+      useSession,
+
+      sessionStart,
+
+      sessionEnd,
+
+      initialBalance,
+
+      riskPct,
+
+      costR
+
+    };
+
+
+    const modeSettings =
+      presets(
+        base
+      );
+
+
+    /* ============================================================
+       RUN EACH MODE
+    ============================================================ */
+
+    const results =
+      modeSettings.map(
+        settings =>
+          runMode(
+
+            data,
+
+            startIndex,
+
+            settings
+
+          )
+      );
+
+
+    /*
+     * BEST MODE IS CHOSEN USING
+     * DEVELOPMENT ONLY.
+     */
+
+    const ranked =
+      [
+        ...results
+      ]
+        .sort(
+          (
+            a,
+            b
+          ) =>
+            b.selectionScore -
+            a.selectionScore
+        );
+
+
+    const best =
+      ranked[0];
+
+
+    /* ============================================================
+       LIVE STATE
+    ============================================================ */
+
+    const latest =
+      latestState(
+        data,
+        modeSettings
+      );
+
+
+    const periodStart =
+      data.m5[
+        startIndex
+      ];
+
+
+    const periodEnd =
+      data.m5[
+        data.m5.length -
+        1
+      ];
+
+
+    /* ============================================================
+       REGIME WARNING
+    ============================================================ */
+
+    let regimeCoverage =
+      "MIXED";
+
+
+    if (
+      best.metrics.buys === 0 &&
+      best.metrics.sells > 0
+    ) {
+
+      regimeCoverage =
+        "SHORT-ONLY SAMPLE";
+
+    }
+
+
+    if (
+      best.metrics.sells === 0 &&
+      best.metrics.buys > 0
+    ) {
+
+      regimeCoverage =
+        "LONG-ONLY SAMPLE";
+
+    }
+
+
+    if (
+      best.metrics.buys > 0 &&
+      best.metrics.sells > 0
+    ) {
+
+      regimeCoverage =
+        "BOTH DIRECTIONS TESTED";
+
+    }
 
 
     return res
@@ -4157,29 +5170,39 @@ export default async function handler(
         ok: true,
 
         strategy:
-          "TYSON TREND PULLBACK V1.2",
+          "TYSON TREND PULLBACK V1.3",
 
         symbol:
           SYMBOL,
 
-        latest:
-          latestState(data),
+        provider:
+          "Twelve Data",
+
+        dataArchitecture:
+          "M5 source with locally aggregated M15/H1/H4",
+
+        selectionMethod:
+          "Best mode selected using first 70% only",
+
+        requestedTestBars,
+
+        downloadedM5Bars:
+          data.m5.length,
+
+        evaluatedM5Bars:
+          data.m5.length -
+          startIndex,
 
         period: {
 
           start:
             new Date(
-              data.m5[
-                startIndex
-              ].ts
+              periodStart.ts
             ).toISOString(),
 
           end:
             new Date(
-              data.m5[
-                data.m5.length -
-                1
-              ].closeTs
+              periodEnd.closeTs
             ).toISOString()
 
         },
@@ -4187,50 +5210,101 @@ export default async function handler(
         bestMode:
           best.mode,
 
-        best,
+        regimeCoverage,
+
+        best: {
+
+          mode:
+            best.mode,
+
+          selectionScore:
+            best.selectionScore,
+
+          splitTime:
+            best.splitTime,
+
+          metrics:
+            best.metrics,
+
+          development:
+            best.development,
+
+          validation:
+            best.validation,
+
+          direction:
+            best.direction
+
+        },
 
         modes:
-          modeResults.map(
+          ranked.map(
             result => ({
 
               mode:
                 result.mode,
 
-              metrics:
-                result.metrics,
-
-              development:
-                result.development,
-
-              validation:
-                result.validation,
+              selectionScore:
+                result.selectionScore,
 
               splitTime:
-                result.splitTime
+                result.splitTime,
+
+              metrics:
+                compactMetrics(
+                  result.metrics
+                ),
+
+              grade:
+                result.metrics.grade,
+
+              verdict:
+                result.metrics.verdict,
+
+              development:
+                compactMetrics(
+                  result.development
+                ),
+
+              validation:
+                compactMetrics(
+                  result.validation
+                ),
+
+              direction:
+                result.direction
 
             })
           ),
 
+        latest,
+
         trades:
           best.trades
-            .slice(-300)
+            .slice(-400)
             .reverse(),
 
         assumptions: [
 
-          "No unfinished M5 candle is used.",
+          "Only completed M5 candles are downloaded.",
 
-          "Higher-timeframe candles are unavailable until completed.",
+          "M15, H1 and H4 are created locally from the same M5 feed.",
 
-          "Entry occurs on the next M5 open.",
+          "Higher-timeframe candles cannot be used until their scheduled close time.",
 
-          "Stop has priority if stop and target are reachable in the same bar.",
+          "Signals enter on the next M5 candle open.",
 
-          "Breakeven activates only for following candles.",
+          "Stop loss wins same-bar TP/SL collisions for conservative testing.",
 
-          "The engine compares strict, balanced and active rule sets.",
+          "Breakeven becomes active only for subsequent bars.",
 
-          "Backtest results are not guarantees of future profitability."
+          "Trading cost is deducted in R from every trade.",
+
+          "The best strategy mode is chosen using development data only.",
+
+          "Validation data does not influence strategy selection.",
+
+          "Historical performance is not a guarantee of future performance."
 
         ]
 
@@ -4241,7 +5315,10 @@ export default async function handler(
     error
   ) {
 
-    console.error(error);
+    console.error(
+      "V1.3 BACKTEST ERROR:",
+      error
+    );
 
 
     return res
@@ -4252,7 +5329,7 @@ export default async function handler(
 
         error:
           error?.message ||
-          "Backtest failed"
+          "Backtest failed."
 
       });
 
