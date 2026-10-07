@@ -1,9 +1,13 @@
 {
-  "name": "mkayfx-gold-liquidity-backtester",
+  "name": "tyson-ema-mtf-strategy-lab",
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "description": "Multi-timeframe EMA 20/50/200 XAUUSD strategy backtester",
   "engines": {
     "node": ">=20"
+  },
+  "scripts": {
+    "start": "vercel dev"
   }
 }
