@@ -7,12 +7,12 @@
 
 <meta
   name="viewport"
-  content="width=device-width, initial-scale=1, viewport-fit=cover"
+  content="width=device-width,initial-scale=1,viewport-fit=cover"
 >
 
 <meta
   name="theme-color"
-  content="#05080d"
+  content="#04070c"
 >
 
 <meta
@@ -25,44 +25,41 @@
   content="black-translucent"
 >
 
-<title>TYSON EMA LAB</title>
+<title>TYSON TREND PULLBACK</title>
 
 
 <style>
 
-/* =========================================================
-   RESET
-========================================================= */
-
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
 }
 
+:root{
 
-html {
-  scroll-behavior: smooth;
+  --bg:#03060a;
+  --card:#0b121c;
+  --card2:#080e16;
+
+  --border:rgba(150,180,220,.17);
+
+  --text:#f5f7fb;
+  --muted:#8695aa;
+
+  --green:#48dc8b;
+  --red:#ff606c;
+
+  --blue:#65aaff;
+  --cyan:#54dad9;
+
+  --yellow:#ffc965;
 }
 
+body{
 
-body {
-  margin: 0;
-  min-height: 100vh;
+  margin:0;
 
-  background:
-    radial-gradient(
-      circle at 50% -20%,
-      rgba(37,99,235,.15),
-      transparent 34%
-    ),
-    linear-gradient(
-      180deg,
-      #07101b 0%,
-      #030609 44%,
-      #05070a 100%
-    );
-
-  color: #f4f7fb;
+  min-height:100vh;
 
   font-family:
     -apple-system,
@@ -70,60 +67,39 @@ body {
     "SF Pro Display",
     "Segoe UI",
     sans-serif;
+
+  color:var(--text);
+
+  background:
+
+    radial-gradient(
+      circle at 50% -10%,
+      rgba(42,106,205,.17),
+      transparent 30%
+    ),
+
+    linear-gradient(
+      180deg,
+      #08111d 0%,
+      #03070b 42%,
+      #020406 100%
+    );
 }
 
 
-/* =========================================================
-   VARIABLES
-========================================================= */
+.app{
 
-:root {
-
-  --bg: #05080d;
-
-  --panel: rgba(14,22,33,.88);
-
-  --panel2: rgba(8,14,22,.94);
-
-  --border: rgba(132,164,205,.18);
-
-  --border2: rgba(132,164,205,.28);
-
-  --text: #f4f7fb;
-
-  --muted: #8e9cb1;
-
-  --green: #48db8b;
-
-  --red: #ff616c;
-
-  --blue: #63a8ff;
-
-  --cyan: #54d9dc;
-
-  --gold: #ffcb64;
-
-}
-
-
-/* =========================================================
-   MAIN
-========================================================= */
-
-.app {
-
-  width: min(
-    100%,
-    1180px
+  width:min(
+    1180px,
+    100%
   );
 
-  margin: 0 auto;
+  margin:auto;
 
   padding:
-    24px
-    18px
+    22px
+    16px
     80px;
-
 }
 
 
@@ -131,27 +107,22 @@ body {
    HEADER
 ========================================================= */
 
-.header {
+.header{
 
-  display: flex;
-
-  align-items: center;
+  display:flex;
 
   justify-content:
     space-between;
 
-  gap: 18px;
+  align-items:center;
 
-  margin-bottom: 26px;
+  gap:16px;
 
+  margin-bottom:24px;
 }
 
 
-.brand h1 {
-
-  margin: 0;
-
-  letter-spacing: .16em;
+.logo{
 
   font-size:
     clamp(
@@ -160,41 +131,41 @@ body {
       38px
     );
 
+  font-weight:900;
+
+  letter-spacing:.12em;
 }
 
 
-.brand p {
+.subtitle{
 
-  color: var(--muted);
+  margin-top:5px;
 
-  margin:
-    7px 0 0;
+  color:var(--muted);
 
-  font-size: 15px;
-
+  font-size:14px;
 }
 
 
-.feed-pill {
+.badge{
 
   padding:
-    13px 17px;
+    11px 15px;
+
+  border-radius:999px;
 
   border:
     1px solid
-    var(--border2);
-
-  border-radius: 999px;
+    var(--border);
 
   background:
-    rgba(5,10,16,.8);
+    rgba(3,8,14,.75);
 
-  color: #9eabc0;
+  color:#9eacc0;
 
-  white-space: nowrap;
+  font-size:11px;
 
-  font-size: 13px;
-
+  white-space:nowrap;
 }
 
 
@@ -202,593 +173,212 @@ body {
    PANEL
 ========================================================= */
 
-.panel {
-
-  position: relative;
+.panel{
 
   background:
+
     linear-gradient(
       145deg,
-      rgba(16,25,38,.94),
-      rgba(7,13,20,.94)
+      rgba(15,24,36,.96),
+      rgba(7,12,19,.96)
     );
 
   border:
     1px solid
     var(--border);
 
-  border-radius: 28px;
+  border-radius:27px;
 
-  padding: 24px;
+  padding:22px;
 
-  margin-bottom: 22px;
+  margin-bottom:20px;
 
   box-shadow:
     0 20px 60px
-    rgba(0,0,0,.28);
-
-  overflow: hidden;
-
+    rgba(0,0,0,.26);
 }
 
 
-.panel::before {
+.title-row{
 
-  content: "";
-
-  position: absolute;
-
-  inset:
-    0 0 auto 0;
-
-  height: 1px;
-
-  background:
-    linear-gradient(
-      90deg,
-      transparent,
-      rgba(99,168,255,.45),
-      transparent
-    );
-
-}
-
-
-.panel-title {
-
-  display: flex;
-
-  align-items: center;
+  display:flex;
 
   justify-content:
     space-between;
 
-  gap: 14px;
+  align-items:center;
 
-  margin-bottom: 20px;
+  gap:12px;
 
+  margin-bottom:18px;
 }
 
 
-.panel-title h2 {
+.title{
 
-  margin: 0;
+  margin:0;
 
-  font-size: 17px;
+  color:#bcc7d7;
 
-  letter-spacing: .14em;
+  font-size:15px;
 
-  color: #b8c4d5;
-
+  letter-spacing:.14em;
 }
 
 
-.small {
+.muted{
 
-  color: var(--muted);
-
-  font-size: 12px;
-
-}
-
-
-/* =========================================================
-   CURRENT BIAS
-========================================================= */
-
-.bias-grid {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(
-      4,
-      minmax(0,1fr)
-    );
-
-  gap: 14px;
-
-}
-
-
-.metric {
-
-  padding: 18px;
-
-  background:
-    rgba(4,9,15,.58);
-
-  border:
-    1px solid
-    var(--border);
-
-  border-radius: 19px;
-
-}
-
-
-.metric .label {
-
-  color: var(--muted);
-
-  text-transform:
-    uppercase;
-
-  letter-spacing: .08em;
-
-  font-size: 12px;
-
-  margin-bottom: 10px;
-
-}
-
-
-.metric .value {
-
-  font-size: 23px;
-
-  font-weight: 800;
-
-}
-
-
-.metric .sub {
-
-  margin-top: 7px;
-
-  color: var(--muted);
-
-  font-size: 12px;
-
+  color:var(--muted);
 }
 
 
 /* =========================================================
-   BIAS WORD
+   LIVE STATE
 ========================================================= */
 
-#bias {
+.bias{
+
+  margin:
+    2px 0 16px;
+
+  font-weight:950;
 
   font-size:
     clamp(
-      36px,
-      8vw,
-      74px
+      42px,
+      9vw,
+      76px
     );
 
-  font-weight: 900;
-
-  letter-spacing: -.04em;
-
-  margin:
-    6px 0 18px;
-
+  letter-spacing:-.05em;
 }
 
 
-.bullish {
+.bull{
+  color:var(--green);
+}
 
-  color:
-    var(--green);
+.bear{
+  color:var(--red);
+}
 
+.neutral{
+  color:var(--yellow);
 }
 
 
-.bearish {
+.score-grid{
 
-  color:
-    var(--red);
-
-}
-
-
-.neutral {
-
-  color:
-    var(--gold);
-
-}
-
-
-/* =========================================================
-   SCORE BARS
-========================================================= */
-
-.score-row {
-
-  display: grid;
+  display:grid;
 
   grid-template-columns:
     1fr 1fr;
 
-  gap: 16px;
+  gap:12px;
 
+  margin-bottom:16px;
 }
 
 
-.score-box {
+.score{
+
+  padding:16px;
+
+  border-radius:17px;
 
   border:
     1px solid
     var(--border);
 
-  border-radius: 18px;
-
-  padding: 17px;
-
   background:
-    rgba(3,8,13,.48);
-
+    rgba(3,8,14,.55);
 }
 
 
-.score-top {
+.score-top{
 
-  display: flex;
+  display:flex;
 
   justify-content:
     space-between;
 
-  align-items: center;
+  margin-bottom:11px;
 
-  font-size: 14px;
+  color:#a5b2c5;
 
-  margin-bottom: 12px;
-
+  font-size:13px;
 }
 
 
-.progress {
+.bar{
 
-  height: 7px;
+  height:7px;
 
-  border-radius: 999px;
+  overflow:hidden;
+
+  border-radius:999px;
 
   background:
-    rgba(255,255,255,.06);
-
-  overflow: hidden;
-
+    rgba(255,255,255,.055);
 }
 
 
-.progress > div {
+.bar div{
 
-  height: 100%;
+  height:100%;
 
-  width: 0%;
-
-  border-radius: inherit;
+  width:0;
 
   transition:
-    width .5s ease;
-
+    width .4s ease;
 }
 
 
-#bullBar {
+#longBar{
 
   background:
     linear-gradient(
       90deg,
-      #239d64,
-      #4ce79a
+      #239b62,
+      #48dc8b
     );
-
 }
 
 
-#bearBar {
+#shortBar{
 
   background:
     linear-gradient(
       90deg,
-      #b83846,
-      #ff6874
+      #b53241,
+      #ff606c
     );
-
 }
 
 
 /* =========================================================
-   SETTINGS
+   TIMEFRAMES
 ========================================================= */
 
-.settings {
+.tf-grid{
 
-  display: grid;
+  display:grid;
 
   grid-template-columns:
     repeat(
       4,
-      minmax(0,1fr)
+      1fr
     );
 
-  gap: 14px;
-
+  gap:12px;
 }
 
 
-.field {
+.tf{
 
-  display: flex;
+  padding:16px;
 
-  flex-direction: column;
-
-  gap: 8px;
-
-}
-
-
-.field label {
-
-  color: #97a5b9;
-
-  font-size: 12px;
-
-  letter-spacing: .05em;
-
-  text-transform: uppercase;
-
-}
-
-
-input,
-select {
-
-  width: 100%;
-
-  border:
-    1px solid
-    var(--border2);
-
-  background:
-    rgba(2,7,12,.75);
-
-  color: #f5f7fb;
-
-  border-radius: 14px;
-
-  padding:
-    14px 13px;
-
-  font-size: 15px;
-
-  outline: none;
-
-}
-
-
-input:focus,
-select:focus {
-
-  border-color:
-    var(--blue);
-
-}
-
-
-.checkbox-row {
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 8px;
-
-}
-
-
-.checkbox-row input {
-
-  width: auto;
-
-}
-
-
-.btn {
-
-  width: 100%;
-
-  margin-top: 18px;
-
-  padding:
-    17px 20px;
-
-  border: 0;
-
-  border-radius: 17px;
-
-  color: #04101a;
-
-  font-size: 15px;
-
-  font-weight: 900;
-
-  letter-spacing: .05em;
-
-  cursor: pointer;
-
-  background:
-    linear-gradient(
-      90deg,
-      #62a9ff,
-      #50ded3,
-      #4ad98b
-    );
-
-  box-shadow:
-    0 12px 35px
-    rgba(69,181,255,.16);
-
-}
-
-
-.btn:disabled {
-
-  opacity: .45;
-
-}
-
-
-/* =========================================================
-   SUMMARY
-========================================================= */
-
-.summary-grid {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(
-      6,
-      minmax(0,1fr)
-    );
-
-  gap: 12px;
-
-}
-
-
-.summary-card {
-
-  background:
-    rgba(3,8,14,.62);
-
-  border:
-    1px solid
-    var(--border);
-
-  border-radius: 18px;
-
-  padding: 16px;
-
-}
-
-
-.summary-card .k {
-
-  color: var(--muted);
-
-  font-size: 11px;
-
-  text-transform: uppercase;
-
-  letter-spacing: .07em;
-
-}
-
-
-.summary-card .v {
-
-  font-size: 22px;
-
-  font-weight: 850;
-
-  margin-top: 8px;
-
-}
-
-
-/* =========================================================
-   GRADE
-========================================================= */
-
-.grade-row {
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 15px;
-
-  margin-top: 18px;
-
-  padding: 17px;
-
-  border:
-    1px solid
-    var(--border);
-
-  border-radius: 18px;
-
-  background:
-    rgba(0,0,0,.2);
-
-}
-
-
-.grade {
-
-  width: 58px;
-
-  height: 58px;
-
-  display: grid;
-
-  place-items: center;
-
-  flex:
-    0 0 auto;
-
-  border-radius: 15px;
-
-  font-size: 28px;
-
-  font-weight: 900;
-
-  background:
-    rgba(99,168,255,.12);
-
-  border:
-    1px solid
-    rgba(99,168,255,.25);
-
-}
-
-
-/* =========================================================
-   TF CARDS
-========================================================= */
-
-.tf-grid {
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(
-      4,
-      minmax(0,1fr)
-    );
-
-  gap: 13px;
-
-}
-
-
-.tf-card {
-
-  padding: 17px;
+  border-radius:17px;
 
   border:
     1px solid
@@ -796,61 +386,281 @@ select:focus {
 
   background:
     rgba(3,8,14,.52);
-
-  border-radius: 18px;
-
 }
 
 
-.tf-name {
+.tf h3{
 
-  color: var(--blue);
+  margin:
+    0 0 9px;
 
-  font-size: 14px;
+  color:var(--blue);
 
-  font-weight: 850;
-
-  margin-bottom: 11px;
-
+  font-size:13px;
 }
 
 
-.tf-alignment {
+.tf-state{
 
-  font-weight: 850;
+  font-weight:850;
 
-  font-size: 17px;
-
-  margin-bottom: 12px;
-
+  margin-bottom:10px;
 }
 
 
-.ema-line {
+.line{
 
-  display: flex;
+  display:flex;
 
   justify-content:
     space-between;
 
-  gap: 8px;
-
-  font-size: 12px;
+  gap:7px;
 
   padding:
-    5px 0;
+    4px 0;
 
-  color: var(--muted);
+  color:var(--muted);
 
+  font-size:11px;
 }
 
 
-.ema-line b {
+.line b{
 
-  color: #dae2ee;
+  color:#e3e9f2;
+}
 
-  font-weight: 650;
 
+/* =========================================================
+   SETTINGS
+========================================================= */
+
+.settings{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      1fr
+    );
+
+  gap:12px;
+}
+
+
+.field{
+
+  display:flex;
+
+  flex-direction:column;
+
+  gap:7px;
+}
+
+
+label{
+
+  font-size:11px;
+
+  color:#8f9db1;
+
+  letter-spacing:.05em;
+
+  text-transform:uppercase;
+}
+
+
+input,
+select{
+
+  width:100%;
+
+  padding:
+    13px 12px;
+
+  color:#f5f7fb;
+
+  background:
+    rgba(2,7,12,.75);
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:13px;
+
+  outline:none;
+
+  font-size:14px;
+}
+
+
+button{
+
+  width:100%;
+
+  border:0;
+
+  border-radius:16px;
+
+  padding:16px;
+
+  margin-top:17px;
+
+  font-size:14px;
+
+  font-weight:900;
+
+  color:#041019;
+
+  background:
+    linear-gradient(
+      90deg,
+      #62aaff,
+      #53dbd8,
+      #4add8d
+    );
+}
+
+
+button:disabled{
+  opacity:.5;
+}
+
+
+/* =========================================================
+   METRICS
+========================================================= */
+
+.metrics{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      6,
+      1fr
+    );
+
+  gap:11px;
+}
+
+
+.metric{
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:17px;
+
+  background:
+    rgba(3,8,14,.54);
+
+  padding:15px;
+}
+
+
+.metric-name{
+
+  color:var(--muted);
+
+  font-size:10px;
+
+  text-transform:uppercase;
+
+  letter-spacing:.06em;
+}
+
+
+.metric-value{
+
+  font-weight:900;
+
+  font-size:20px;
+
+  margin-top:7px;
+}
+
+
+.grade-row{
+
+  margin-top:15px;
+
+  display:flex;
+
+  gap:13px;
+
+  align-items:center;
+
+  padding:15px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:17px;
+
+  background:
+    rgba(0,0,0,.18);
+}
+
+
+.grade{
+
+  width:55px;
+
+  height:55px;
+
+  flex:none;
+
+  display:grid;
+
+  place-items:center;
+
+  border-radius:15px;
+
+  background:
+    rgba(101,170,255,.10);
+
+  font-weight:950;
+
+  font-size:27px;
+
+  color:var(--blue);
+}
+
+
+/* =========================================================
+   CANVAS
+========================================================= */
+
+.chart{
+
+  height:260px;
+
+  border:
+    1px solid
+    var(--border);
+
+  background:
+    rgba(2,6,10,.55);
+
+  border-radius:17px;
+
+  overflow:hidden;
+}
+
+
+canvas{
+
+  display:block;
+
+  width:100%;
+
+  height:100%;
 }
 
 
@@ -858,189 +668,89 @@ select:focus {
    TABLE
 ========================================================= */
 
-.table-wrap {
+.table-wrap{
 
-  overflow-x: auto;
+  overflow:auto;
 
   border:
     1px solid
     var(--border);
 
-  border-radius: 18px;
-
+  border-radius:17px;
 }
 
 
-table {
+table{
 
-  border-collapse:
-    collapse;
+  width:100%;
 
-  width: 100%;
+  min-width:900px;
 
-  min-width: 800px;
+  border-collapse:collapse;
 
   background:
     rgba(3,8,14,.45);
-
 }
 
 
 th,
-td {
+td{
+
+  text-align:left;
 
   padding:
-    13px 14px;
+    12px 13px;
 
   border-bottom:
     1px solid
     rgba(255,255,255,.055);
 
-  text-align: left;
-
-  font-size: 13px;
-
+  font-size:12px;
 }
 
 
-th {
+th{
 
-  color: #91a1b7;
+  color:#8f9eb3;
 
-  font-size: 11px;
+  font-size:10px;
 
-  letter-spacing: .06em;
+  text-transform:uppercase;
 
-  text-transform: uppercase;
-
+  letter-spacing:.06em;
 }
 
 
-tbody tr:hover {
+.tag{
 
-  background:
-    rgba(99,168,255,.04);
-
-}
-
-
-.rank {
-
-  width: 28px;
-
-  height: 28px;
-
-  border-radius: 9px;
-
-  display: grid;
-
-  place-items: center;
-
-  background:
-    rgba(99,168,255,.1);
-
-  color:
-    var(--blue);
-
-  font-weight: 800;
-
-}
-
-
-/* =========================================================
-   TRADE TAGS
-========================================================= */
-
-.tag {
-
-  display: inline-flex;
-
-  align-items: center;
-
-  justify-content: center;
+  display:inline-block;
 
   padding:
     5px 9px;
 
-  border-radius: 999px;
+  border-radius:999px;
 
-  font-weight: 800;
+  font-size:10px;
 
-  font-size: 11px;
-
+  font-weight:900;
 }
 
 
-.buy {
+.buy{
 
-  color:
-    var(--green);
+  color:var(--green);
 
   background:
-    rgba(72,219,139,.1);
-
+    rgba(72,220,139,.10);
 }
 
 
-.sell {
+.sell{
 
-  color:
-    var(--red);
+  color:var(--red);
 
   background:
-    rgba(255,97,108,.1);
-
-}
-
-
-.tp {
-
-  color:
-    var(--green);
-
-}
-
-
-.sl {
-
-  color:
-    var(--red);
-
-}
-
-
-/* =========================================================
-   CHART
-========================================================= */
-
-.chart-box {
-
-  position: relative;
-
-  height: 260px;
-
-  border:
-    1px solid
-    var(--border);
-
-  border-radius: 18px;
-
-  background:
-    rgba(2,6,11,.55);
-
-  overflow: hidden;
-
-}
-
-
-canvas {
-
-  display: block;
-
-  width: 100%;
-
-  height: 100%;
-
+    rgba(255,96,108,.10);
 }
 
 
@@ -1048,72 +758,46 @@ canvas {
    STATUS
 ========================================================= */
 
-.status {
+.status{
 
-  margin-top: 17px;
+  margin-top:15px;
 
-  border-radius: 15px;
+  padding:13px;
 
-  padding:
-    13px 15px;
-
-  color: #97a7ba;
+  border-radius:14px;
 
   border:
     1px solid
     var(--border);
 
-  background:
-    rgba(0,0,0,.2);
+  color:#91a1b5;
 
+  background:
+    rgba(0,0,0,.18);
 }
 
 
-.status.ok {
+.status.good{
+
+  color:#91efba;
 
   border-color:
-    rgba(72,219,139,.35);
-
-  color:
-    #8ef1ba;
+    rgba(72,220,139,.3);
 
   background:
-    rgba(72,219,139,.07);
-
+    rgba(72,220,139,.06);
 }
 
 
-.status.error {
+.status.bad{
+
+  color:#ff9ba4;
 
   border-color:
-    rgba(255,97,108,.35);
-
-  color:
-    #ff9ca4;
+    rgba(255,96,108,.3);
 
   background:
-    rgba(255,97,108,.07);
-
-}
-
-
-/* =========================================================
-   FOOTER
-========================================================= */
-
-.disclaimer {
-
-  color: #78869b;
-
-  text-align: center;
-
-  line-height: 1.6;
-
-  font-size: 12px;
-
-  padding:
-    20px 8px;
-
+    rgba(255,96,108,.06);
 }
 
 
@@ -1121,141 +805,52 @@ canvas {
    MOBILE
 ========================================================= */
 
-@media (
-  max-width: 900px
-) {
+@media(
+  max-width:900px
+){
 
-  .settings {
-
+  .settings{
     grid-template-columns:
-      repeat(
-        2,
-        1fr
-      );
-
+      1fr 1fr;
   }
 
-
-  .summary-grid {
-
+  .metrics{
     grid-template-columns:
-      repeat(
-        3,
-        1fr
-      );
-
+      repeat(3,1fr);
   }
 
-
-  .bias-grid {
-
+  .tf-grid{
     grid-template-columns:
-      repeat(
-        2,
-        1fr
-      );
-
-  }
-
-
-  .tf-grid {
-
-    grid-template-columns:
-      repeat(
-        2,
-        1fr
-      );
-
+      1fr 1fr;
   }
 
 }
 
 
-@media (
-  max-width: 580px
-) {
+@media(
+  max-width:560px
+){
 
-  .app {
-
+  .app{
     padding:
       18px
-      12px
+      11px
       60px;
-
   }
 
-
-  .header {
-
-    align-items:
-      flex-start;
-
+  .panel{
+    padding:17px;
+    border-radius:23px;
   }
 
-
-  .feed-pill {
-
-    padding:
-      10px 12px;
-
-    font-size: 10px;
-
-  }
-
-
-  .panel {
-
-    padding: 18px;
-
-    border-radius: 23px;
-
-  }
-
-
-  .settings {
-
+  .metrics{
     grid-template-columns:
       1fr 1fr;
-
   }
 
-
-  .summary-grid {
-
+  .score-grid{
     grid-template-columns:
       1fr 1fr;
-
-  }
-
-
-  .bias-grid {
-
-    grid-template-columns:
-      1fr 1fr;
-
-  }
-
-
-  .score-row {
-
-    grid-template-columns:
-      1fr;
-
-  }
-
-
-  .tf-grid {
-
-    grid-template-columns:
-      1fr 1fr;
-
-  }
-
-
-  .summary-card .v {
-
-    font-size: 18px;
-
   }
 
 }
@@ -1270,45 +865,43 @@ canvas {
 <div class="app">
 
 
-<!-- ======================================================
-     HEADER
-====================================================== -->
-
 <div class="header">
 
-  <div class="brand">
+  <div>
 
-    <h1>TYSON EMA LAB</h1>
+    <div class="logo">
+      TYSON PULLBACK AI
+    </div>
 
-    <p>
-      Multi-Timeframe EMA Strategy Intelligence
-    </p>
+    <div class="subtitle">
+      XAU/USD Multi-Timeframe Trend Engine
+    </div>
 
   </div>
 
 
-  <div class="feed-pill">
-    TWELVE DATA · BACKTEST
+  <div class="badge">
+    M5 · M15 · H1 · H4
   </div>
 
 </div>
 
 
 <!-- ======================================================
-     CURRENT EMA STATE
+     CURRENT MARKET
 ====================================================== -->
 
 <section class="panel">
 
-  <div class="panel-title">
+  <div class="title-row">
 
-    <h2>
-      CURRENT MTF STATE
+    <h2 class="title">
+      CURRENT MARKET REGIME
     </h2>
 
     <span
-      class="small"
-      id="latestTime"
+      id="time"
+      class="muted"
     >
       —
     </span>
@@ -1318,55 +911,47 @@ canvas {
 
   <div
     id="bias"
-    class="neutral"
+    class="bias neutral"
   >
     LOADING
   </div>
 
 
-  <div class="score-row">
+  <div class="score-grid">
 
-    <div class="score-box">
+    <div class="score">
 
       <div class="score-top">
 
-        <span>
-          BULL SCORE
-        </span>
+        <span>LONG SCORE</span>
 
-        <b id="bullScore">
+        <b id="longScore">
           —
         </b>
 
       </div>
 
-      <div class="progress">
-
-        <div id="bullBar"></div>
-
+      <div class="bar">
+        <div id="longBar"></div>
       </div>
 
     </div>
 
 
-    <div class="score-box">
+    <div class="score">
 
       <div class="score-top">
 
-        <span>
-          BEAR SCORE
-        </span>
+        <span>SHORT SCORE</span>
 
-        <b id="bearScore">
+        <b id="shortScore">
           —
         </b>
 
       </div>
 
-      <div class="progress">
-
-        <div id="bearBar"></div>
-
+      <div class="bar">
+        <div id="shortBar"></div>
       </div>
 
     </div>
@@ -1377,7 +962,6 @@ canvas {
   <div
     class="tf-grid"
     id="tfGrid"
-    style="margin-top:18px"
   >
   </div>
 
@@ -1390,14 +974,14 @@ canvas {
 
 <section class="panel">
 
-  <div class="panel-title">
+  <div class="title-row">
 
-    <h2>
-      CUSTOM STRATEGY
+    <h2 class="title">
+      BACKTEST SETTINGS
     </h2>
 
-    <span class="small">
-      M5 EXECUTION
+    <span class="muted">
+      NO LOOK-AHEAD
     </span>
 
   </div>
@@ -1409,15 +993,13 @@ canvas {
     <div class="field">
 
       <label>
-        M5 Bars
+        History M5 Bars
       </label>
 
       <input
         id="bars"
         type="number"
-        value="2200"
-        min="600"
-        max="4500"
+        value="2500"
       >
 
     </div>
@@ -1426,76 +1008,13 @@ canvas {
     <div class="field">
 
       <label>
-        Trigger
-      </label>
-
-      <select id="trigger">
-
-        <option value="pullback">
-          EMA20 Pullback
-        </option>
-
-        <option value="continuation">
-          Continuation Break
-        </option>
-
-        <option value="fresh">
-          Fresh M5 Stack
-        </option>
-
-        <option value="every">
-          Every Qualified Bar
-        </option>
-
-      </select>
-
-    </div>
-
-
-    <div class="field">
-
-      <label>
-        Required TF Align
-      </label>
-
-      <select id="requiredAligned">
-
-        <option value="4">
-          4 / 4
-        </option>
-
-        <option
-          value="3"
-          selected
-        >
-          3 / 4
-        </option>
-
-        <option value="2">
-          2 / 4
-        </option>
-
-        <option value="1">
-          1 / 4
-        </option>
-
-      </select>
-
-    </div>
-
-
-    <div class="field">
-
-      <label>
-        Minimum EMA Score
+        Minimum Score
       </label>
 
       <input
         id="minScore"
         type="number"
-        value="62"
-        min="25"
-        max="100"
+        value="80"
       >
 
     </div>
@@ -1504,14 +1023,13 @@ canvas {
     <div class="field">
 
       <label>
-        Stop ATR
+        M15 Minimum ADX
       </label>
 
       <input
-        id="slATR"
+        id="minADX"
         type="number"
-        value="1.20"
-        step="0.05"
+        value="18"
       >
 
     </div>
@@ -1524,9 +1042,175 @@ canvas {
       </label>
 
       <input
-        id="rr"
+        id="targetR"
+        type="number"
+        value="1.8"
+        step="0.1"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Pullback Bars
+      </label>
+
+      <input
+        id="pullbackBars"
+        type="number"
+        value="3"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Pullback ATR Tolerance
+      </label>
+
+      <input
+        id="pullbackToleranceATR"
+        type="number"
+        value="0.18"
+        step="0.01"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Minimum Candle Body
+      </label>
+
+      <input
+        id="minBody"
+        type="number"
+        value="0.45"
+        step="0.05"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Max Chase ATR
+      </label>
+
+      <input
+        id="maxChaseATR"
+        type="number"
+        value="0.75"
+        step="0.05"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Swing Lookback
+      </label>
+
+      <input
+        id="swingLookback"
+        type="number"
+        value="6"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Min Stop ATR
+      </label>
+
+      <input
+        id="minStopATR"
+        type="number"
+        value="0.80"
+        step="0.05"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Max Stop ATR
+      </label>
+
+      <input
+        id="maxStopATR"
         type="number"
         value="2.00"
+        step="0.05"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Structure Buffer ATR
+      </label>
+
+      <input
+        id="structureBufferATR"
+        type="number"
+        value="0.15"
+        step="0.05"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Breakeven
+      </label>
+
+      <select id="useBreakeven">
+
+        <option
+          value="true"
+          selected
+        >
+          Enabled
+        </option>
+
+        <option value="false">
+          Disabled
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Breakeven At R
+      </label>
+
+      <input
+        id="breakevenR"
+        type="number"
+        value="1"
         step="0.1"
       >
 
@@ -1540,9 +1224,9 @@ canvas {
       </label>
 
       <input
-        id="maxHold"
+        id="maxHoldBars"
         type="number"
-        value="60"
+        value="48"
       >
 
     </div>
@@ -1572,7 +1256,7 @@ canvas {
       <input
         id="riskPct"
         type="number"
-        value="0.50"
+        value="0.5"
         step="0.05"
       >
 
@@ -1582,7 +1266,7 @@ canvas {
     <div class="field">
 
       <label>
-        Initial Equity
+        Starting Balance
       </label>
 
       <input
@@ -1597,13 +1281,13 @@ canvas {
     <div class="field">
 
       <label>
-        Trading Cost In R
+        Cost Per Trade R
       </label>
 
       <input
         id="costR"
         type="number"
-        value="0.03"
+        value="0.04"
         step="0.01"
       >
 
@@ -1638,20 +1322,20 @@ canvas {
     <div class="field">
 
       <label>
-        Require H4 Align
+        Session Filter
       </label>
 
-      <select id="requireH4">
+      <select id="useSession">
 
         <option
           value="true"
           selected
         >
-          Yes
+          Enabled
         </option>
 
         <option value="false">
-          No
+          Disabled
         </option>
 
       </select>
@@ -1662,23 +1346,14 @@ canvas {
     <div class="field">
 
       <label>
-        Require H1 Align
+        UTC Session Start
       </label>
 
-      <select id="requireH1">
-
-        <option
-          value="true"
-          selected
-        >
-          Yes
-        </option>
-
-        <option value="false">
-          No
-        </option>
-
-      </select>
+      <input
+        id="sessionStart"
+        type="number"
+        value="6"
+      >
 
     </div>
 
@@ -1686,23 +1361,14 @@ canvas {
     <div class="field">
 
       <label>
-        Require M15 Align
+        UTC Session End
       </label>
 
-      <select id="requireM15">
-
-        <option
-          value="false"
-          selected
-        >
-          No
-        </option>
-
-        <option value="true">
-          Yes
-        </option>
-
-      </select>
+      <input
+        id="sessionEnd"
+        type="number"
+        value="18"
+      >
 
     </div>
 
@@ -1710,11 +1376,10 @@ canvas {
 
 
   <button
-    id="runBtn"
-    class="btn"
+    id="run"
     onclick="runBacktest()"
   >
-    RUN EMA STRATEGY LAB
+    RUN TREND PULLBACK BACKTEST
   </button>
 
 
@@ -1729,20 +1394,20 @@ canvas {
 
 
 <!-- ======================================================
-     CUSTOM RESULTS
+     RESULTS
 ====================================================== -->
 
 <section class="panel">
 
-  <div class="panel-title">
+  <div class="title-row">
 
-    <h2>
-      CUSTOM BACKTEST
+    <h2 class="title">
+      PERFORMANCE
     </h2>
 
     <span
-      class="small"
       id="period"
+      class="muted"
     >
       —
     </span>
@@ -1751,8 +1416,8 @@ canvas {
 
 
   <div
-    class="summary-grid"
-    id="summary"
+    class="metrics"
+    id="metrics"
   >
   </div>
 
@@ -1760,12 +1425,11 @@ canvas {
   <div class="grade-row">
 
     <div
-      class="grade"
       id="grade"
+      class="grade"
     >
       —
     </div>
-
 
     <div>
 
@@ -1779,11 +1443,9 @@ canvas {
         —
       </div>
 
-      <div
-        class="small"
-        id="settingsSummary"
-      >
-        —
+      <div class="muted">
+        Grade is based on trade count, PF,
+        expectancy and drawdown.
       </div>
 
     </div>
@@ -1794,89 +1456,27 @@ canvas {
 
 
 <!-- ======================================================
-     EQUITY CURVE
+     EQUITY
 ====================================================== -->
 
 <section class="panel">
 
-  <div class="panel-title">
+  <div class="title-row">
 
-    <h2>
+    <h2 class="title">
       EQUITY CURVE
     </h2>
 
-    <span class="small">
-      FIXED FRACTION RISK
+    <span class="muted">
+      FIXED FRACTIONAL
     </span>
 
   </div>
 
 
-  <div class="chart-box">
+  <div class="chart">
 
-    <canvas id="equityCanvas"></canvas>
-
-  </div>
-
-</section>
-
-
-<!-- ======================================================
-     STRATEGY LAB
-====================================================== -->
-
-<section class="panel">
-
-  <div class="panel-title">
-
-    <h2>
-      AUTOMATIC STRATEGY LAB
-    </h2>
-
-    <span class="small">
-      BEST CONFIGURATIONS RANKED
-    </span>
-
-  </div>
-
-
-  <div class="table-wrap">
-
-    <table>
-
-      <thead>
-
-        <tr>
-
-          <th>#</th>
-
-          <th>Strategy</th>
-
-          <th>Trades</th>
-
-          <th>WR</th>
-
-          <th>PF</th>
-
-          <th>Expectancy</th>
-
-          <th>Total R</th>
-
-          <th>DD</th>
-
-          <th>Final Equity</th>
-
-          <th>Grade</th>
-
-        </tr>
-
-      </thead>
-
-
-      <tbody id="labBody">
-      </tbody>
-
-    </table>
+    <canvas id="chart"></canvas>
 
   </div>
 
@@ -1889,14 +1489,14 @@ canvas {
 
 <section class="panel">
 
-  <div class="panel-title">
+  <div class="title-row">
 
-    <h2>
-      CUSTOM TRADE LOG
+    <h2 class="title">
+      TRADE LOG
     </h2>
 
-    <span class="small">
-      LATEST 200 MAX
+    <span class="muted">
+      LATEST 250
     </span>
 
   </div>
@@ -1912,30 +1512,30 @@ canvas {
 
           <th>Side</th>
 
+          <th>Score</th>
+
           <th>Entry Time</th>
 
           <th>Entry</th>
 
-          <th>SL</th>
+          <th>Stop</th>
 
-          <th>TP</th>
+          <th>Target</th>
 
           <th>Exit</th>
 
-          <th>R</th>
-
-          <th>EMA Score</th>
-
-          <th>TF Align</th>
+          <th>Net R</th>
 
           <th>Result</th>
+
+          <th>Bars</th>
 
         </tr>
 
       </thead>
 
 
-      <tbody id="tradeBody">
+      <tbody id="trades">
       </tbody>
 
     </table>
@@ -1943,15 +1543,6 @@ canvas {
   </div>
 
 </section>
-
-
-<div class="disclaimer">
-
-  Historical backtest results do not guarantee future performance.
-  This engine deliberately uses completed higher-timeframe candles
-  and next-candle entries to reduce look-ahead bias.
-
-</div>
 
 
 </div>
@@ -1964,27 +1555,30 @@ canvas {
 ========================================================= */
 
 const $ =
-  (id) =>
-    document.getElementById(id);
+  id =>
+    document.getElementById(
+      id
+    );
 
 
-function n(
+let latestData =
+  null;
+
+
+function num(
   value,
   decimals = 2
-) {
+){
 
-  if (
+  if(
     value === null ||
     value === undefined ||
     !Number.isFinite(
       Number(value)
     )
-  ) {
-
+  ){
     return "—";
-
   }
-
 
   return Number(value)
     .toLocaleString(
@@ -2001,66 +1595,30 @@ function n(
 }
 
 
-function money(value) {
+function dateText(value){
 
-  if (
-    !Number.isFinite(
-      Number(value)
-    )
-  ) {
-
+  if(!value){
     return "—";
-
   }
 
-
-  return Number(value)
-    .toLocaleString(
-      undefined,
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }
-    );
+  return new Date(value)
+    .toLocaleString();
 
 }
 
 
-function dateText(value) {
-
-  if (!value) {
-    return "—";
-  }
-
-
-  const d =
-    new Date(value);
-
-
-  return d.toLocaleString();
-
-}
-
-
-/* =========================================================
-   STATUS
-========================================================= */
-
-function setStatus(
+function status(
   text,
   type = ""
-) {
+){
 
-  const el =
-    $("status");
+  $("status")
+    .className =
+      `status ${type}`;
 
-
-  el.textContent =
-    text;
-
-
-  el.className =
-    `status ${type}`;
+  $("status")
+    .textContent =
+      text;
 
 }
 
@@ -2069,56 +1627,76 @@ function setStatus(
    QUERY
 ========================================================= */
 
-function buildQuery() {
+function buildQuery(){
 
-  return new URLSearchParams({
+  const ids = [
 
-    bars:
-      $("bars").value,
+    "bars",
 
-    trigger:
-      $("trigger").value,
+    "minScore",
 
-    requiredAligned:
-      $("requiredAligned").value,
+    "minADX",
 
-    minScore:
-      $("minScore").value,
+    "targetR",
 
-    slATR:
-      $("slATR").value,
+    "pullbackBars",
 
-    rr:
-      $("rr").value,
+    "pullbackToleranceATR",
 
-    maxHold:
-      $("maxHold").value,
+    "minBody",
 
-    cooldownBars:
-      $("cooldownBars").value,
+    "maxChaseATR",
 
-    riskPct:
-      $("riskPct").value,
+    "swingLookback",
 
-    initialBalance:
-      $("initialBalance").value,
+    "minStopATR",
 
-    costR:
-      $("costR").value,
+    "maxStopATR",
 
-    side:
-      $("side").value,
+    "structureBufferATR",
 
-    requireH4:
-      $("requireH4").value,
+    "useBreakeven",
 
-    requireH1:
-      $("requireH1").value,
+    "breakevenR",
 
-    requireM15:
-      $("requireM15").value
+    "maxHoldBars",
 
-  });
+    "cooldownBars",
+
+    "riskPct",
+
+    "initialBalance",
+
+    "costR",
+
+    "side",
+
+    "useSession",
+
+    "sessionStart",
+
+    "sessionEnd"
+
+  ];
+
+
+  const query =
+    new URLSearchParams();
+
+
+  for(
+    const id of ids
+  ){
+
+    query.set(
+      id,
+      $(id).value
+    );
+
+  }
+
+
+  return query;
 
 }
 
@@ -2127,26 +1705,26 @@ function buildQuery() {
    RUN
 ========================================================= */
 
-async function runBacktest() {
+async function runBacktest(){
 
-  const btn =
-    $("runBtn");
+  const button =
+    $("run");
 
 
-  btn.disabled =
+  button.disabled =
     true;
 
 
-  btn.textContent =
-    "RUNNING BACKTEST…";
+  button.textContent =
+    "ANALYSING…";
 
 
-  setStatus(
-    "Downloading M5, M15, H1 and H4 data and rebuilding EMA history…"
+  status(
+    "Loading M5, M15, H1 and H4 history…"
   );
 
 
-  try {
+  try{
 
     const query =
       buildQuery();
@@ -2166,10 +1744,10 @@ async function runBacktest() {
       await response.json();
 
 
-    if (
+    if(
       !response.ok ||
       !data.ok
-    ) {
+    ){
 
       throw new Error(
         data.error ||
@@ -2179,37 +1757,37 @@ async function runBacktest() {
     }
 
 
-    renderAll(data);
+    latestData =
+      data;
 
 
-    setStatus(
-      `Backtest complete. ${data.custom.metrics.trades} custom trades evaluated.`,
-      "ok"
+    render(data);
+
+
+    status(
+      `Complete. ${data.metrics.trades} trades evaluated.`,
+      "good"
     );
 
 
-  } catch (
-    error
-  ) {
+  }catch(error){
 
     console.error(error);
 
 
-    setStatus(
-      error.message ||
-      "Something went wrong.",
-      "error"
+    status(
+      error.message,
+      "bad"
     );
 
+  }finally{
 
-  } finally {
-
-    btn.disabled =
+    button.disabled =
       false;
 
 
-    btn.textContent =
-      "RUN EMA STRATEGY LAB";
+    button.textContent =
+      "RUN TREND PULLBACK BACKTEST";
 
   }
 
@@ -2217,164 +1795,175 @@ async function runBacktest() {
 
 
 /* =========================================================
-   RENDER ALL
+   RENDER
 ========================================================= */
 
-function renderAll(data) {
+function render(data){
 
   renderLatest(
     data.latest
   );
 
 
-  renderCustom(
-    data.custom,
-    data.meta
-  );
-
-
-  renderLab(
-    data.lab
+  renderMetrics(
+    data.metrics
   );
 
 
   renderTrades(
-    data.custom.trades ||
-    []
+    data.trades
   );
 
 
-  drawEquity(
-    data.custom.metrics
-      .equityCurve ||
-    []
+  drawChart(
+    data.metrics
+      .equityCurve
   );
+
+
+  $("period")
+    .textContent =
+      `${dateText(data.period.start)} → ${dateText(data.period.end)}`;
 
 }
 
 
 /* =========================================================
-   LATEST STATE
+   LIVE MARKET
 ========================================================= */
 
-function renderLatest(latest) {
+function renderLatest(latest){
 
-  if (!latest) {
+  if(!latest){
     return;
   }
 
 
-  const bias =
-    $("bias");
-
-
-  bias.textContent =
-    latest.bias;
-
-
-  bias.className =
-    latest.bias ===
-    "BULLISH"
-      ? "bullish"
-      : latest.bias ===
-        "BEARISH"
-        ? "bearish"
-        : "neutral";
-
-
-  $("bullScore")
+  $("bias")
     .textContent =
-      `${n(latest.bullScore,1)}%`;
+      latest.bias;
 
 
-  $("bearScore")
+  $("bias")
+    .className =
+      `bias ${
+        latest.bias === "BULLISH"
+          ? "bull"
+          : latest.bias === "BEARISH"
+            ? "bear"
+            : "neutral"
+      }`;
+
+
+  $("longScore")
     .textContent =
-      `${n(latest.bearScore,1)}%`;
+      `${latest.longScore}/100`;
 
 
-  $("bullBar")
+  $("shortScore")
+    .textContent =
+      `${latest.shortScore}/100`;
+
+
+  $("longBar")
     .style.width =
-      `${latest.bullScore || 0}%`;
+      `${latest.longScore}%`;
 
 
-  $("bearBar")
+  $("shortBar")
     .style.width =
-      `${latest.bearScore || 0}%`;
+      `${latest.shortScore}%`;
 
 
-  $("latestTime")
+  $("time")
     .textContent =
       dateText(
         latest.time
       );
 
 
-  const tfGrid =
+  const container =
     $("tfGrid");
 
 
-  tfGrid.innerHTML =
+  container.innerHTML =
     "";
 
 
-  for (
-    const key of [
-      "m5",
-      "m15",
-      "h1",
-      "h4"
-    ]
-  ) {
+  const names = {
+
+    m5:"M5",
+
+    m15:"M15",
+
+    h1:"H1",
+
+    h4:"H4"
+
+  };
+
+
+  for(
+    const key of
+    Object.keys(
+      names
+    )
+  ){
 
     const tf =
-      latest.timeframes[key];
-
-
-    if (!tf) {
-      continue;
-    }
+      latest.timeframes[
+        key
+      ];
 
 
     const cls =
-      tf.alignment ===
-      "BULLISH"
-        ? "bullish"
-        : tf.alignment ===
-          "BEARISH"
-          ? "bearish"
+      tf.state === "BULLISH"
+        ? "bull"
+        : tf.state === "BEARISH"
+          ? "bear"
           : "neutral";
 
 
-    tfGrid.innerHTML += `
+    container.innerHTML += `
 
-      <div class="tf-card">
+      <div class="tf">
 
-        <div class="tf-name">
-          ${tf.label}
+        <h3>
+          ${names[key]}
+        </h3>
+
+        <div class="tf-state ${cls}">
+          ${tf.state}
         </div>
 
-        <div class="tf-alignment ${cls}">
-          ${tf.alignment}
-        </div>
-
-        <div class="ema-line">
+        <div class="line">
           <span>Price</span>
-          <b>${n(tf.close,2)}</b>
+          <b>${num(tf.close,2)}</b>
         </div>
 
-        <div class="ema-line">
+        <div class="line">
           <span>EMA20</span>
-          <b>${n(tf.ema20,2)}</b>
+          <b>${num(tf.ema20,2)}</b>
         </div>
 
-        <div class="ema-line">
+        <div class="line">
           <span>EMA50</span>
-          <b>${n(tf.ema50,2)}</b>
+          <b>${num(tf.ema50,2)}</b>
         </div>
 
-        <div class="ema-line">
+        <div class="line">
           <span>EMA200</span>
-          <b>${n(tf.ema200,2)}</b>
+          <b>${num(tf.ema200,2)}</b>
+        </div>
+
+        <div class="line">
+          <span>RSI</span>
+          <b>${num(tf.rsi,1)}</b>
+        </div>
+
+        <div class="line">
+          <span>ADX</span>
+          <b>${num(tf.adx,1)}</b>
         </div>
 
       </div>
@@ -2387,19 +1976,12 @@ function renderLatest(latest) {
 
 
 /* =========================================================
-   CUSTOM RESULTS
+   METRICS
 ========================================================= */
 
-function renderCustom(
-  custom,
-  meta
-) {
+function renderMetrics(m){
 
-  const m =
-    custom.metrics;
-
-
-  const items = [
+  const values = [
 
     [
       "Trades",
@@ -2407,13 +1989,28 @@ function renderCustom(
     ],
 
     [
+      "Wins",
+      m.wins
+    ],
+
+    [
+      "Losses",
+      m.losses
+    ],
+
+    [
+      "Breakeven",
+      m.breakevens
+    ],
+
+    [
       "Win Rate",
-      `${n(m.winRate,1)}%`
+      `${num(m.winRate,1)}%`
     ],
 
     [
       "Profit Factor",
-      n(
+      num(
         m.profitFactor,
         2
       )
@@ -2421,76 +2018,65 @@ function renderCustom(
 
     [
       "Expectancy",
-      `${n(m.expectancyR,3)}R`
+      `${num(m.expectancyR,3)}R`
     ],
 
     [
-      "Total",
-      `${n(m.totalR,2)}R`
+      "Total R",
+      `${num(m.totalR,2)}R`
     ],
 
     [
       "Max DD",
-      `${n(m.maxDrawdownPct,2)}%`
-    ],
-
-    [
-      "Final Equity",
-      money(
-        m.finalBalance
-      )
+      `${num(m.maxDrawdown,2)}%`
     ],
 
     [
       "Return",
-      `${n(m.returnPct,2)}%`
+      `${num(m.returnPct,2)}%`
     ],
 
     [
-      "Average Win",
-      `${n(m.averageWinR,2)}R`
+      "Final Balance",
+      num(
+        m.finalBalance,
+        2
+      )
     ],
 
     [
-      "Average Loss",
-      `${n(m.averageLossR,2)}R`
-    ],
-
-    [
-      "BUY Trades",
-      m.longTrades
-    ],
-
-    [
-      "SELL Trades",
-      m.shortTrades
+      "BUY / SELL",
+      `${m.buyTrades} / ${m.sellTrades}`
     ]
 
   ];
 
 
-  const summary =
-    $("summary");
+  const container =
+    $("metrics");
 
 
-  summary.innerHTML =
+  container.innerHTML =
     "";
 
 
-  for (
-    const item of items
-  ) {
+  for(
+    const [
+      name,
+      value
+    ] of values
+  ){
 
-    summary.innerHTML += `
+    container.innerHTML += `
 
-      <div class="summary-card">
+      <div class="metric">
 
-        <div class="k">
-          ${item[0]}
+        <div class="metric-name">
+          ${name}
         </div>
 
-        <div class="v">
-          ${item[1]}
+        <div class="metric-value">
+          ${value}
         </div>
 
       </div>
@@ -2509,120 +2095,26 @@ function renderCustom(
     .textContent =
       m.verdict;
 
-
-  $("settingsSummary")
-    .textContent =
-      `${custom.settings.requiredAligned}/4 aligned · ${custom.settings.trigger} · ${custom.settings.slATR} ATR stop · ${custom.settings.rr}R target`;
-
-
-  $("period")
-    .textContent =
-      `${dateText(meta.backtestStart)} → ${dateText(meta.backtestEnd)}`;
-
 }
 
 
 /* =========================================================
-   LAB RESULTS
+   TRADES
 ========================================================= */
 
-function renderLab(lab) {
+function renderTrades(trades){
 
   const body =
-    $("labBody");
+    $("trades");
 
 
   body.innerHTML =
     "";
 
 
-  lab.forEach(
-    (
-      result,
-      index
-    ) => {
-
-      const m =
-        result.metrics;
-
-
-      body.innerHTML += `
-
-        <tr>
-
-          <td>
-            <div class="rank">
-              ${index + 1}
-            </div>
-          </td>
-
-          <td>
-            <b>
-              ${result.name}
-            </b>
-          </td>
-
-          <td>
-            ${m.trades}
-          </td>
-
-          <td>
-            ${n(m.winRate,1)}%
-          </td>
-
-          <td>
-            ${n(m.profitFactor,2)}
-          </td>
-
-          <td>
-            ${n(m.expectancyR,3)}R
-          </td>
-
-          <td>
-            ${n(m.totalR,2)}R
-          </td>
-
-          <td>
-            ${n(m.maxDrawdownPct,2)}%
-          </td>
-
-          <td>
-            ${money(m.finalBalance)}
-          </td>
-
-          <td>
-            <b>
-              ${m.grade}
-            </b>
-          </td>
-
-        </tr>
-
-      `;
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   TRADE LOG
-========================================================= */
-
-function renderTrades(trades) {
-
-  const body =
-    $("tradeBody");
-
-
-  body.innerHTML =
-    "";
-
-
-  if (
+  if(
     !trades.length
-  ) {
+  ){
 
     body.innerHTML = `
 
@@ -2631,12 +2123,12 @@ function renderTrades(trades) {
         <td
           colspan="10"
           style="
-            text-align:center;
-            color:#8795aa;
             padding:30px;
+            text-align:center;
+            color:#8998ad;
           "
         >
-          No trades for this configuration.
+          No trades found with these rules.
         </td>
 
       </tr>
@@ -2648,22 +2140,22 @@ function renderTrades(trades) {
   }
 
 
-  for (
+  for(
     const trade of trades
-  ) {
+  ){
 
-    const sideClass =
+    const tagClass =
       trade.side === "BUY"
         ? "buy"
         : "sell";
 
 
-    const resultClass =
+    const rClass =
       trade.netR > 0
-        ? "tp"
+        ? "bull"
         : trade.netR < 0
-          ? "sl"
-          : "";
+          ? "bear"
+          : "neutral";
 
 
     body.innerHTML += `
@@ -2671,9 +2163,13 @@ function renderTrades(trades) {
       <tr>
 
         <td>
-          <span class="tag ${sideClass}">
+          <span class="tag ${tagClass}">
             ${trade.side}
           </span>
+        </td>
+
+        <td>
+          ${trade.score}/100
         </td>
 
         <td>
@@ -2681,35 +2177,31 @@ function renderTrades(trades) {
         </td>
 
         <td>
-          ${n(trade.entry,2)}
+          ${num(trade.entry,2)}
         </td>
 
         <td>
-          ${n(trade.stopLoss,2)}
+          ${num(trade.stopLoss,2)}
         </td>
 
         <td>
-          ${n(trade.takeProfit,2)}
+          ${num(trade.target,2)}
         </td>
 
         <td>
-          ${n(trade.exitPrice,2)}
+          ${num(trade.exit,2)}
         </td>
 
-        <td class="${resultClass}">
-          ${n(trade.netR,2)}R
+        <td class="${rClass}">
+          ${num(trade.netR,2)}R
+        </td>
+
+        <td class="${rClass}">
+          ${trade.result}
         </td>
 
         <td>
-          ${n(trade.emaScore,1)}%
-        </td>
-
-        <td>
-          ${trade.alignedTF}/4
-        </td>
-
-        <td class="${resultClass}">
-          ${trade.reason}
+          ${trade.holdBars}
         </td>
 
       </tr>
@@ -2722,22 +2214,17 @@ function renderTrades(trades) {
 
 
 /* =========================================================
-   EQUITY CHART
+   EQUITY CURVE
 ========================================================= */
 
-function drawEquity(curve) {
+function drawChart(curve){
 
   const canvas =
-    $("equityCanvas");
+    $("chart");
 
 
   const parent =
     canvas.parentElement;
-
-
-  const dpr =
-    window.devicePixelRatio ||
-    1;
 
 
   const width =
@@ -2748,20 +2235,19 @@ function drawEquity(curve) {
     parent.clientHeight;
 
 
+  const dpr =
+    window.devicePixelRatio ||
+    1;
+
+
   canvas.width =
-    width * dpr;
+    width *
+    dpr;
 
 
   canvas.height =
-    height * dpr;
-
-
-  canvas.style.width =
-    `${width}px`;
-
-
-  canvas.style.height =
-    `${height}px`;
+    height *
+    dpr;
 
 
   const ctx =
@@ -2784,13 +2270,14 @@ function drawEquity(curve) {
   );
 
 
-  if (
+  if(
     !curve ||
-    curve.length < 2
-  ) {
+    curve.length <
+    2
+  ){
 
     ctx.fillStyle =
-      "#8493a8";
+      "#8797ad";
 
 
     ctx.font =
@@ -2798,24 +2285,26 @@ function drawEquity(curve) {
 
 
     ctx.fillText(
-      "Not enough trades to draw equity curve.",
+      "Not enough trades for an equity curve.",
       20,
       35
     );
+
 
     return;
 
   }
 
 
-  const padding = 26;
+  const padding =
+    25;
 
 
   const values =
     curve.map(
-      p =>
+      item =>
         Number(
-          p.equity
+          item.equity
         )
     );
 
@@ -2832,52 +2321,48 @@ function drawEquity(curve) {
     );
 
 
-  if (
+  if(
     min === max
-  ) {
+  ){
 
     min -= 1;
-
     max += 1;
 
   }
 
 
-  /*
-   * Grid
-   */
-
   ctx.strokeStyle =
     "rgba(255,255,255,.055)";
 
 
-  ctx.lineWidth = 1;
+  ctx.lineWidth =
+    1;
 
 
-  for (
+  for(
     let i = 1;
     i <= 4;
     i++
-  ) {
+  ){
 
     const y =
       padding +
       (
-        (
-          height -
-          padding * 2
-        ) /
-        4
+        height -
+        padding * 2
       ) *
-      i;
+      i /
+      4;
 
 
     ctx.beginPath();
+
 
     ctx.moveTo(
       padding,
       y
     );
+
 
     ctx.lineTo(
       width -
@@ -2885,14 +2370,11 @@ function drawEquity(curve) {
       y
     );
 
+
     ctx.stroke();
 
   }
 
-
-  /*
-   * Equity line
-   */
 
   const gradient =
     ctx.createLinearGradient(
@@ -2906,19 +2388,19 @@ function drawEquity(curve) {
 
   gradient.addColorStop(
     0,
-    "#62a9ff"
+    "#65aaff"
   );
 
 
   gradient.addColorStop(
-    .55,
-    "#52d8da"
+    .5,
+    "#54dad9"
   );
 
 
   gradient.addColorStop(
     1,
-    "#48db8b"
+    "#48dc8b"
   );
 
 
@@ -2926,7 +2408,8 @@ function drawEquity(curve) {
     gradient;
 
 
-  ctx.lineWidth = 2.3;
+  ctx.lineWidth =
+    2.3;
 
 
   ctx.beginPath();
@@ -2972,16 +2455,16 @@ function drawEquity(curve) {
         );
 
 
-      if (
+      if(
         index === 0
-      ) {
+      ){
 
         ctx.moveTo(
           x,
           y
         );
 
-      } else {
+      }else{
 
         ctx.lineTo(
           x,
@@ -2996,42 +2479,6 @@ function drawEquity(curve) {
 
   ctx.stroke();
 
-
-  /*
-   * Labels
-   */
-
-  ctx.fillStyle =
-    "#8b9ab0";
-
-
-  ctx.font =
-    "11px -apple-system";
-
-
-  ctx.fillText(
-    max.toLocaleString(
-      undefined,
-      {
-        maximumFractionDigits: 0
-      }
-    ),
-    8,
-    18
-  );
-
-
-  ctx.fillText(
-    min.toLocaleString(
-      undefined,
-      {
-        maximumFractionDigits: 0
-      }
-    ),
-    8,
-    height - 10
-  );
-
 }
 
 
@@ -3039,21 +2486,17 @@ function drawEquity(curve) {
    RESIZE
 ========================================================= */
 
-let lastData =
-  null;
-
-
 window.addEventListener(
   "resize",
   () => {
 
-    if (
-      lastData?.custom?.metrics
+    if(
+      latestData?.metrics
         ?.equityCurve
-    ) {
+    ){
 
-      drawEquity(
-        lastData.custom.metrics
+      drawChart(
+        latestData.metrics
           .equityCurve
       );
 
@@ -3064,40 +2507,15 @@ window.addEventListener(
 
 
 /* =========================================================
-   WRAP RENDER FOR RESIZE CACHE
-========================================================= */
-
-const originalRenderAll =
-  renderAll;
-
-
-renderAll =
-  function(data) {
-
-    lastData =
-      data;
-
-    originalRenderAll(data);
-
-  };
-
-
-/* =========================================================
-   AUTO START
+   START
 ========================================================= */
 
 window.addEventListener(
   "load",
-  () => {
-
-    runBacktest();
-
-  }
+  runBacktest
 );
 
 </script>
 
-
 </body>
-
 </html>
