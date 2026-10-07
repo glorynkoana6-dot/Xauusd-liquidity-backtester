@@ -1,9 +1,9 @@
 {
-  "name": "tyson-trend-pullback-v1-1",
-  "version": "1.1.0",
+  "name": "tyson-regime-pullback-v1-4",
+  "version": "1.4.0",
   "private": true,
   "type": "module",
-  "description": "XAUUSD multi-timeframe trend pullback backtester with validation",
+  "description": "XAUUSD regime filtered multi-timeframe EMA pullback walk-forward backtester",
   "engines": {
     "node": ">=20"
   },
