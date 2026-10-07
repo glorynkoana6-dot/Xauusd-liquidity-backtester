@@ -15,7 +15,19 @@
   content="#030609"
 >
 
-<title>TYSON PULLBACK V1.2</title>
+<meta
+  name="apple-mobile-web-app-capable"
+  content="yes"
+>
+
+<meta
+  name="apple-mobile-web-app-status-bar-style"
+  content="black-translucent"
+>
+
+<title>
+  TYSON PULLBACK V1.3
+</title>
 
 
 <style>
@@ -26,80 +38,186 @@
 }
 
 :root{
+
   --bg:#030609;
-  --panel:#0b131e;
+
+  --panel:#0c1420;
+
+  --panel2:#070d14;
+
   --border:rgba(145,177,219,.18);
+
+  --border2:rgba(145,177,219,.28);
+
   --text:#f5f8fc;
+
   --muted:#8999af;
+
   --green:#49df8d;
+
   --red:#ff616d;
+
   --blue:#65aaff;
+
   --cyan:#50dadd;
+
   --gold:#ffcc67;
+
+}
+
+html{
+  scroll-behavior:smooth;
 }
 
 body{
+
   margin:0;
+
   min-height:100vh;
+
   color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "Segoe UI",
+    sans-serif;
 
   background:
+
     radial-gradient(
       circle at 50% -10%,
-      rgba(55,111,201,.18),
-      transparent 31%
+      rgba(54,113,207,.20),
+      transparent 30%
     ),
+
+    radial-gradient(
+      circle at 0% 40%,
+      rgba(65,222,190,.05),
+      transparent 25%
+    ),
+
     linear-gradient(
       180deg,
       #07101b,
       #030609 45%,
       #020406
     );
+
 }
+
+
+/* =========================================================
+   APP
+========================================================= */
 
 .app{
-  width:min(1180px,100%);
+
+  width:min(
+    1180px,
+    100%
+  );
+
   margin:auto;
-  padding:22px 14px 80px;
+
+  padding:
+    21px
+    14px
+    80px;
+
 }
 
+
+/* =========================================================
+   HEADER
+========================================================= */
+
 .header{
+
   display:flex;
-  justify-content:space-between;
+
   align-items:center;
-  gap:14px;
-  margin-bottom:22px;
+
+  justify-content:
+    space-between;
+
+  gap:15px;
+
+  margin-bottom:23px;
+
 }
 
 .logo{
+
+  font-size:
+    clamp(
+      22px,
+      5vw,
+      38px
+    );
+
   font-weight:950;
-  letter-spacing:.12em;
-  font-size:clamp(23px,5vw,38px);
+
+  letter-spacing:.13em;
+
 }
 
 .subtitle{
+
   color:var(--muted);
-  font-size:13px;
+
   margin-top:6px;
+
+  font-size:13px;
+
 }
 
-.badge{
-  padding:11px 14px;
-  border:1px solid var(--border);
+.version{
+
+  padding:
+    11px 14px;
+
+  white-space:nowrap;
+
   border-radius:999px;
-  color:#9eacc0;
-  background:rgba(2,7,12,.7);
-  font-size:10px;
-}
 
-.panel{
-  margin-bottom:20px;
-  padding:20px;
-  border-radius:27px;
-  border:1px solid var(--border);
+  border:
+    1px solid
+    var(--border);
 
   background:
+    rgba(2,7,12,.70);
+
+  color:#a0aec2;
+
+  font-size:10px;
+
+}
+
+
+/* =========================================================
+   PANEL
+========================================================= */
+
+.panel{
+
+  position:relative;
+
+  overflow:hidden;
+
+  margin-bottom:20px;
+
+  padding:21px;
+
+  border-radius:27px;
+
+  border:
+    1px solid
+    var(--border);
+
+  background:
+
     linear-gradient(
       145deg,
       rgba(15,24,37,.97),
@@ -107,130 +225,92 @@ body{
     );
 
   box-shadow:
-    0 20px 60px rgba(0,0,0,.26);
+    0 20px 65px
+    rgba(0,0,0,.27);
+
+}
+
+.panel::before{
+
+  content:"";
+
+  position:absolute;
+
+  left:8%;
+
+  right:8%;
+
+  top:0;
+
+  height:1px;
+
+  background:
+
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(101,170,255,.37),
+      transparent
+    );
+
 }
 
 .title-row{
+
   display:flex;
+
   align-items:center;
-  justify-content:space-between;
+
+  justify-content:
+    space-between;
+
   gap:12px;
+
   margin-bottom:18px;
+
 }
 
 .title{
+
   margin:0;
+
   color:#bec9d9;
+
   font-size:15px;
+
   letter-spacing:.14em;
+
 }
 
 .small{
+
   color:var(--muted);
+
   font-size:11px;
+
 }
 
-.best{
-  font-size:clamp(38px,8vw,68px);
+
+/* =========================================================
+   BIG TEXT
+========================================================= */
+
+.big{
+
+  margin:
+    3px 0 15px;
+
+  font-size:
+    clamp(
+      39px,
+      8vw,
+      72px
+    );
+
   font-weight:950;
-  letter-spacing:-.04em;
-  color:var(--green);
-  margin:4px 0 17px;
-}
 
-.mode-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:12px;
-}
+  letter-spacing:-.045em;
 
-.mode-card{
-  border:1px solid var(--border);
-  border-radius:19px;
-  background:rgba(3,8,14,.54);
-  padding:16px;
-}
-
-.mode-name{
-  color:var(--blue);
-  font-weight:900;
-  letter-spacing:.08em;
-  margin-bottom:13px;
-}
-
-.stats{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
-}
-
-.stat{
-  padding:10px;
-  border-radius:12px;
-  background:rgba(0,0,0,.18);
-}
-
-.stat span{
-  display:block;
-  color:var(--muted);
-  font-size:9px;
-  text-transform:uppercase;
-}
-
-.stat b{
-  display:block;
-  margin-top:5px;
-  font-size:15px;
-}
-
-.validation{
-  margin-top:12px;
-  padding-top:12px;
-  border-top:1px solid rgba(255,255,255,.06);
-}
-
-.validation-title{
-  color:#9caac0;
-  font-size:10px;
-  letter-spacing:.08em;
-  margin-bottom:8px;
-}
-
-.tf-grid{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:11px;
-}
-
-.tf{
-  padding:15px;
-  border:1px solid var(--border);
-  border-radius:17px;
-  background:rgba(3,8,14,.52);
-}
-
-.tf h3{
-  margin:0 0 8px;
-  color:var(--blue);
-  font-size:13px;
-}
-
-.tf-state{
-  font-weight:850;
-  margin-bottom:8px;
-}
-
-.line{
-  display:flex;
-  justify-content:space-between;
-  gap:7px;
-  padding:4px 0;
-  color:var(--muted);
-  font-size:11px;
-}
-
-.line b{
-  color:#e4eaf3;
 }
 
 .bull{
@@ -245,133 +325,832 @@ body{
   color:var(--gold);
 }
 
-.metrics{
+
+/* =========================================================
+   SETTINGS
+========================================================= */
+
+.settings{
+
   display:grid;
-  grid-template-columns:repeat(6,1fr);
+
+  grid-template-columns:
+    repeat(
+      4,
+      1fr
+    );
+
   gap:11px;
+
+}
+
+.field{
+
+  display:flex;
+
+  flex-direction:column;
+
+  gap:7px;
+
+}
+
+label{
+
+  color:#8f9db2;
+
+  font-size:10px;
+
+  letter-spacing:.06em;
+
+  text-transform:uppercase;
+
+}
+
+input,
+select{
+
+  width:100%;
+
+  padding:
+    13px 12px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:13px;
+
+  outline:none;
+
+  color:white;
+
+  background:
+    rgba(2,7,12,.74);
+
+  font-size:14px;
+
+}
+
+button{
+
+  width:100%;
+
+  margin-top:17px;
+
+  padding:16px;
+
+  border:0;
+
+  border-radius:16px;
+
+  color:#031019;
+
+  font-size:14px;
+
+  font-weight:950;
+
+  letter-spacing:.03em;
+
+  background:
+
+    linear-gradient(
+      90deg,
+      #64aaff,
+      #50dadd,
+      #49df8d
+    );
+
+  box-shadow:
+    0 12px 35px
+    rgba(80,170,255,.12);
+
+}
+
+button:disabled{
+  opacity:.45;
+}
+
+
+/* =========================================================
+   METRICS
+========================================================= */
+
+.metrics{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      6,
+      1fr
+    );
+
+  gap:11px;
+
 }
 
 .metric{
+
   padding:15px;
+
+  border:
+    1px solid
+    var(--border);
+
   border-radius:17px;
-  border:1px solid var(--border);
-  background:rgba(3,8,14,.53);
+
+  background:
+    rgba(3,8,14,.54);
+
 }
 
-.metric span{
+.metric-label{
+
   color:var(--muted);
+
   font-size:9px;
+
   text-transform:uppercase;
+
   letter-spacing:.06em;
+
 }
 
-.metric b{
-  display:block;
+.metric-value{
+
   margin-top:7px;
-  font-size:19px;
+
+  font-size:20px;
+
+  font-weight:900;
+
 }
+
+
+/* =========================================================
+   GRADE
+========================================================= */
+
+.grade-row{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:13px;
+
+  margin-top:15px;
+
+  padding:15px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:17px;
+
+  background:
+    rgba(0,0,0,.17);
+
+}
+
+.grade{
+
+  width:57px;
+
+  height:57px;
+
+  display:grid;
+
+  place-items:center;
+
+  flex:none;
+
+  border-radius:15px;
+
+  color:var(--blue);
+
+  background:
+    rgba(101,170,255,.10);
+
+  border:
+    1px solid
+    rgba(101,170,255,.18);
+
+  font-size:27px;
+
+  font-weight:950;
+
+}
+
+
+/* =========================================================
+   VALIDATION
+========================================================= */
+
+.split-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:12px;
+
+}
+
+.split-card{
+
+  padding:17px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:19px;
+
+  background:
+    rgba(3,8,14,.54);
+
+}
+
+.split-title{
+
+  color:var(--blue);
+
+  font-size:11px;
+
+  font-weight:900;
+
+  letter-spacing:.08em;
+
+  margin-bottom:13px;
+
+}
+
+.small-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:8px;
+
+}
+
+.small-stat{
+
+  padding:10px;
+
+  border-radius:12px;
+
+  background:
+    rgba(0,0,0,.18);
+
+}
+
+.small-stat span{
+
+  display:block;
+
+  color:var(--muted);
+
+  text-transform:uppercase;
+
+  font-size:8px;
+
+}
+
+.small-stat b{
+
+  display:block;
+
+  margin-top:5px;
+
+  font-size:15px;
+
+}
+
+
+/* =========================================================
+   MODES
+========================================================= */
+
+.mode-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      1fr
+    );
+
+  gap:12px;
+
+}
+
+.mode{
+
+  padding:16px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:19px;
+
+  background:
+    rgba(3,8,14,.54);
+
+}
+
+.mode-name{
+
+  color:var(--blue);
+
+  font-size:13px;
+
+  font-weight:950;
+
+  letter-spacing:.08em;
+
+  margin-bottom:12px;
+
+}
+
+.selection{
+
+  margin-top:10px;
+
+  padding-top:10px;
+
+  border-top:
+    1px solid
+    rgba(255,255,255,.055);
+
+  color:var(--muted);
+
+  font-size:10px;
+
+}
+
+
+/* =========================================================
+   DIRECTION
+========================================================= */
+
+.direction-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:12px;
+
+}
+
+.direction-card{
+
+  padding:17px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:19px;
+
+  background:
+    rgba(3,8,14,.54);
+
+}
+
+.direction-title{
+
+  margin-bottom:12px;
+
+  font-size:13px;
+
+  font-weight:900;
+
+}
+
+
+/* =========================================================
+   LIVE SIGNALS
+========================================================= */
+
+.live-signals{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      1fr
+    );
+
+  gap:10px;
+
+  margin-bottom:16px;
+
+}
+
+.live-signal{
+
+  padding:14px;
+
+  border-radius:15px;
+
+  border:
+    1px solid
+    var(--border);
+
+  background:
+    rgba(3,8,14,.52);
+
+  text-align:center;
+
+}
+
+.live-signal span{
+
+  display:block;
+
+  color:var(--muted);
+
+  font-size:9px;
+
+  letter-spacing:.07em;
+
+}
+
+.live-signal b{
+
+  display:block;
+
+  margin-top:6px;
+
+  font-size:17px;
+
+}
+
+
+/* =========================================================
+   TIMEFRAMES
+========================================================= */
+
+.tf-grid{
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      1fr
+    );
+
+  gap:11px;
+
+}
+
+.tf{
+
+  padding:15px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:17px;
+
+  background:
+    rgba(3,8,14,.52);
+
+}
+
+.tf h3{
+
+  margin:
+    0 0 8px;
+
+  color:var(--blue);
+
+  font-size:13px;
+
+}
+
+.tf-state{
+
+  margin-bottom:9px;
+
+  font-weight:850;
+
+}
+
+.line{
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:
+    space-between;
+
+  gap:7px;
+
+  padding:
+    4px 0;
+
+  color:var(--muted);
+
+  font-size:11px;
+
+}
+
+.line b{
+  color:#e5ebf4;
+}
+
+
+/* =========================================================
+   CHART
+========================================================= */
 
 .chart{
-  height:260px;
-  border-radius:17px;
-  border:1px solid var(--border);
+
+  height:270px;
+
   overflow:hidden;
-  background:rgba(2,6,10,.55);
+
+  border-radius:17px;
+
+  border:
+    1px solid
+    var(--border);
+
+  background:
+    rgba(2,6,10,.55);
+
 }
 
 canvas{
+
   width:100%;
+
   height:100%;
+
   display:block;
+
 }
 
+
+/* =========================================================
+   TABLE
+========================================================= */
+
 .table-wrap{
+
   overflow:auto;
-  border:1px solid var(--border);
+
+  border:
+    1px solid
+    var(--border);
+
   border-radius:17px;
+
 }
 
 table{
+
   width:100%;
-  min-width:880px;
+
+  min-width:940px;
+
   border-collapse:collapse;
-  background:rgba(3,8,14,.45);
+
+  background:
+    rgba(3,8,14,.45);
+
 }
 
-th,td{
-  padding:12px 13px;
+th,
+td{
+
+  padding:
+    12px 13px;
+
   text-align:left;
-  border-bottom:1px solid rgba(255,255,255,.05);
+
+  border-bottom:
+    1px solid
+    rgba(255,255,255,.05);
+
   font-size:12px;
+
 }
 
 th{
+
   color:#8f9eb3;
-  font-size:10px;
+
+  font-size:9px;
+
   letter-spacing:.06em;
+
   text-transform:uppercase;
+
 }
 
 .tag{
+
   display:inline-block;
-  padding:5px 9px;
+
+  padding:
+    5px 9px;
+
   border-radius:999px;
+
   font-size:10px;
+
   font-weight:900;
+
 }
 
 .buy{
+
   color:var(--green);
-  background:rgba(73,223,141,.1);
+
+  background:
+    rgba(73,223,141,.10);
+
 }
 
 .sell{
+
   color:var(--red);
-  background:rgba(255,97,109,.1);
+
+  background:
+    rgba(255,97,109,.10);
+
 }
 
+
+/* =========================================================
+   STATUS
+========================================================= */
+
 .status{
+
+  margin-top:15px;
+
   padding:13px;
-  border:1px solid var(--border);
+
+  border:
+    1px solid
+    var(--border);
+
   border-radius:14px;
+
   color:#91a1b5;
-  background:rgba(0,0,0,.17);
+
+  background:
+    rgba(0,0,0,.17);
+
 }
 
 .status.good{
-  color:#92efba;
-  border-color:rgba(73,223,141,.3);
+
+  color:#91efba;
+
+  border-color:
+    rgba(73,223,141,.30);
+
+  background:
+    rgba(73,223,141,.055);
+
 }
 
-@media(max-width:900px){
+.status.bad{
+
+  color:#ff9ca5;
+
+  border-color:
+    rgba(255,97,109,.30);
+
+  background:
+    rgba(255,97,109,.055);
+
+}
+
+
+/* =========================================================
+   WARNING
+========================================================= */
+
+.warning{
+
+  margin-top:14px;
+
+  padding:13px;
+
+  border-radius:14px;
+
+  color:var(--gold);
+
+  border:
+    1px solid
+    rgba(255,204,103,.25);
+
+  background:
+    rgba(255,204,103,.055);
+
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(
+  max-width:900px
+){
+
+  .settings{
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+  .metrics{
+    grid-template-columns:
+      repeat(
+        3,
+        1fr
+      );
+  }
 
   .mode-grid{
-    grid-template-columns:1fr;
+    grid-template-columns:
+      1fr;
   }
 
   .tf-grid{
-    grid-template-columns:1fr 1fr;
-  }
-
-  .metrics{
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:
+      1fr 1fr;
   }
 
 }
 
-@media(max-width:560px){
+
+@media(
+  max-width:560px
+){
 
   .app{
-    padding:17px 11px 60px;
+
+    padding:
+      17px
+      11px
+      60px;
+
   }
 
   .panel{
+
     padding:17px;
+
     border-radius:23px;
+
   }
 
   .metrics{
-    grid-template-columns:1fr 1fr;
+
+    grid-template-columns:
+      1fr 1fr;
+
+  }
+
+  .split-grid{
+
+    grid-template-columns:
+      1fr;
+
+  }
+
+  .direction-grid{
+
+    grid-template-columns:
+      1fr;
+
+  }
+
+  .live-signals{
+
+    grid-template-columns:
+      1fr;
+
   }
 
 }
@@ -380,10 +1159,15 @@ th{
 
 </head>
 
+
 <body>
 
 <div class="app">
 
+
+<!-- ======================================================
+     HEADER
+====================================================== -->
 
 <div class="header">
 
@@ -394,41 +1178,266 @@ th{
     </div>
 
     <div class="subtitle">
-      XAU/USD Strategy Laboratory
+      Robust XAU/USD Walk-Forward Laboratory
     </div>
 
   </div>
 
-  <div class="badge">
-    V1.2 · 3 MODES
+
+  <div class="version">
+    V1.3 · ROBUST
   </div>
 
 </div>
 
+
+<!-- ======================================================
+     SETTINGS
+====================================================== -->
 
 <section class="panel">
 
   <div class="title-row">
 
     <h2 class="title">
-      BEST MODE
+      BACKTEST SETTINGS
+    </h2>
+
+    <span class="small">
+      LONG HISTORY
+    </span>
+
+  </div>
+
+
+  <div class="settings">
+
+
+    <div class="field">
+
+      <label>
+        Evaluation M5 Bars
+      </label>
+
+      <input
+        id="bars"
+        type="number"
+        value="9000"
+        min="3000"
+        max="15000"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Target R
+      </label>
+
+      <input
+        id="targetR"
+        type="number"
+        value="1.8"
+        step="0.1"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Risk %
+      </label>
+
+      <input
+        id="riskPct"
+        type="number"
+        value="0.5"
+        step="0.05"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Cost R
+      </label>
+
+      <input
+        id="costR"
+        type="number"
+        value="0.04"
+        step="0.01"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Breakeven
+      </label>
+
+      <select id="useBreakeven">
+
+        <option
+          value="true"
+          selected
+        >
+          Enabled
+        </option>
+
+        <option value="false">
+          Disabled
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Breakeven R
+      </label>
+
+      <input
+        id="breakevenR"
+        type="number"
+        value="1.0"
+        step="0.1"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Session
+      </label>
+
+      <select id="useSession">
+
+        <option
+          value="true"
+          selected
+        >
+          Enabled
+        </option>
+
+        <option value="false">
+          Disabled
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        UTC Session
+      </label>
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:7px;
+        "
+      >
+
+        <input
+          id="sessionStart"
+          type="number"
+          value="5"
+        >
+
+        <input
+          id="sessionEnd"
+          type="number"
+          value="19"
+        >
+
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Starting Balance
+      </label>
+
+      <input
+        id="initialBalance"
+        type="number"
+        value="10000"
+      >
+
+    </div>
+
+
+  </div>
+
+
+  <button
+    id="runButton"
+    onclick="runBacktest()"
+  >
+    RUN ROBUST V1.3 TEST
+  </button>
+
+
+  <div
+    id="status"
+    class="status"
+  >
+    Ready.
+  </div>
+
+</section>
+
+
+<!-- ======================================================
+     BEST MODE
+====================================================== -->
+
+<section class="panel">
+
+  <div class="title-row">
+
+    <h2 class="title">
+      SELECTED MODE
     </h2>
 
     <span
-      class="small"
       id="period"
+      class="small"
     >
       —
     </span>
 
   </div>
 
+
   <div
     id="bestMode"
-    class="best"
+    class="big"
   >
-    LOADING
+    —
   </div>
+
 
   <div
     id="bestMetrics"
@@ -436,22 +1445,184 @@ th{
   >
   </div>
 
+
+  <div class="grade-row">
+
+    <div
+      id="grade"
+      class="grade"
+    >
+      —
+    </div>
+
+
+    <div>
+
+      <div
+        id="verdict"
+        style="
+          font-weight:900;
+          margin-bottom:5px;
+        "
+      >
+        —
+      </div>
+
+
+      <div class="small">
+        Mode selection uses development data only.
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div
+    id="coverageWarning"
+    class="warning"
+    style="display:none"
+  >
+  </div>
+
 </section>
 
+
+<!-- ======================================================
+     DEVELOPMENT / VALIDATION
+====================================================== -->
 
 <section class="panel">
 
   <div class="title-row">
 
     <h2 class="title">
-      STRICT VS BALANCED VS ACTIVE
+      WALK-FORWARD VALIDATION
     </h2>
 
-    <span class="small">
-      SAME DATA
+    <span
+      id="splitTime"
+      class="small"
+    >
+      —
     </span>
 
   </div>
+
+
+  <div class="split-grid">
+
+
+    <div class="split-card">
+
+      <div class="split-title">
+        FIRST 70% · DEVELOPMENT
+      </div>
+
+      <div
+        id="development"
+        class="small-grid"
+      >
+      </div>
+
+    </div>
+
+
+    <div class="split-card">
+
+      <div class="split-title">
+        LAST 30% · UNTOUCHED VALIDATION
+      </div>
+
+      <div
+        id="validation"
+        class="small-grid"
+      >
+      </div>
+
+    </div>
+
+
+  </div>
+
+</section>
+
+
+<!-- ======================================================
+     DIRECTION COVERAGE
+====================================================== -->
+
+<section class="panel">
+
+  <div class="title-row">
+
+    <h2 class="title">
+      DIRECTION COVERAGE
+    </h2>
+
+    <span class="small">
+      BUY VS SELL
+    </span>
+
+  </div>
+
+
+  <div class="direction-grid">
+
+
+    <div class="direction-card">
+
+      <div class="direction-title bull">
+        BUY PERFORMANCE
+      </div>
+
+      <div
+        id="longStats"
+        class="small-grid"
+      >
+      </div>
+
+    </div>
+
+
+    <div class="direction-card">
+
+      <div class="direction-title bear">
+        SELL PERFORMANCE
+      </div>
+
+      <div
+        id="shortStats"
+        class="small-grid"
+      >
+      </div>
+
+    </div>
+
+
+  </div>
+
+</section>
+
+
+<!-- ======================================================
+     MODES
+====================================================== -->
+
+<section class="panel">
+
+  <div class="title-row">
+
+    <h2 class="title">
+      MODE COMPARISON
+    </h2>
+
+    <span class="small">
+      RANKED BY DEVELOPMENT ONLY
+    </span>
+
+  </div>
+
 
   <div
     id="modeGrid"
@@ -462,12 +1633,16 @@ th{
 </section>
 
 
+<!-- ======================================================
+     CURRENT MARKET
+====================================================== -->
+
 <section class="panel">
 
   <div class="title-row">
 
     <h2 class="title">
-      CURRENT MARKET STRUCTURE
+      CURRENT MARKET
     </h2>
 
     <span
@@ -479,12 +1654,21 @@ th{
 
   </div>
 
+
   <div
     id="bias"
-    class="best neutral"
+    class="big neutral"
   >
     —
   </div>
+
+
+  <div
+    id="liveSignals"
+    class="live-signals"
+  >
+  </div>
+
 
   <div
     id="tfGrid"
@@ -495,40 +1679,52 @@ th{
 </section>
 
 
+<!-- ======================================================
+     EQUITY
+====================================================== -->
+
 <section class="panel">
 
   <div class="title-row">
 
     <h2 class="title">
-      BEST MODE EQUITY
+      SELECTED MODE EQUITY
     </h2>
 
     <span class="small">
-      FIXED 0.5% RISK
+      FIXED FRACTIONAL RISK
     </span>
 
   </div>
 
+
   <div class="chart">
+
     <canvas id="chart"></canvas>
+
   </div>
 
 </section>
 
 
+<!-- ======================================================
+     TRADES
+====================================================== -->
+
 <section class="panel">
 
   <div class="title-row">
 
     <h2 class="title">
-      BEST MODE TRADES
+      TRADE LOG
     </h2>
 
     <span class="small">
-      MOST RECENT FIRST
+      SELECTED MODE
     </span>
 
   </div>
+
 
   <div class="table-wrap">
 
@@ -539,18 +1735,29 @@ th{
         <tr>
 
           <th>Side</th>
+
           <th>Score</th>
+
           <th>Entry Time</th>
+
           <th>Entry</th>
+
           <th>SL</th>
+
           <th>TP</th>
+
           <th>Exit</th>
+
           <th>Net R</th>
+
           <th>Result</th>
+
+          <th>Bars</th>
 
         </tr>
 
       </thead>
+
 
       <tbody id="tradeBody">
       </tbody>
@@ -562,27 +1769,29 @@ th{
 </section>
 
 
-<div
-  id="status"
-  class="status"
->
-  Loading…
-</div>
-
-
 </div>
 
 
 <script>
 
+/* =========================================================
+   GLOBAL
+========================================================= */
+
 const $ =
   id =>
-    document.getElementById(id);
+    document.getElementById(
+      id
+    );
 
 
-let dataCache =
+let lastData =
   null;
 
+
+/* =========================================================
+   FORMAT
+========================================================= */
 
 function num(
   value,
@@ -596,7 +1805,9 @@ function num(
       Number(value)
     )
   ){
+
     return "—";
+
   }
 
 
@@ -628,20 +1839,103 @@ function dateText(value){
 }
 
 
+function setStatus(
+  message,
+  type = ""
+){
+
+  const element =
+    $("status");
+
+
+  element.className =
+    `status ${type}`;
+
+
+  element.textContent =
+    message;
+
+}
+
+
 /* =========================================================
-   LOAD
+   API QUERY
 ========================================================= */
 
-async function load(){
+function buildQuery(){
+
+  return new URLSearchParams({
+
+    bars:
+      $("bars").value,
+
+    targetR:
+      $("targetR").value,
+
+    riskPct:
+      $("riskPct").value,
+
+    costR:
+      $("costR").value,
+
+    useBreakeven:
+      $("useBreakeven").value,
+
+    breakevenR:
+      $("breakevenR").value,
+
+    useSession:
+      $("useSession").value,
+
+    sessionStart:
+      $("sessionStart").value,
+
+    sessionEnd:
+      $("sessionEnd").value,
+
+    initialBalance:
+      $("initialBalance").value
+
+  });
+
+}
+
+
+/* =========================================================
+   RUN
+========================================================= */
+
+async function runBacktest(){
+
+  const button =
+    $("runButton");
+
+
+  button.disabled =
+    true;
+
+
+  button.textContent =
+    "DOWNLOADING HISTORY…";
+
+
+  setStatus(
+    "Fetching extended M5 history and rebuilding M15, H1 and H4 locally…"
+  );
+
 
   try{
 
     const response =
       await fetch(
-        "/api/backtest?bars=4500&targetR=1.8&riskPct=0.5",
+
+        `/api/backtest?${buildQuery().toString()}`,
+
         {
-          cache:"no-store"
+          cache:
+            "no-store"
         }
+
       );
 
 
@@ -662,28 +1956,39 @@ async function load(){
     }
 
 
-    dataCache =
+    lastData =
       data;
 
 
     render(data);
 
 
-    $("status")
-      .className =
-        "status good";
-
-
-    $("status")
-      .textContent =
-        `Backtest complete · best mode ${data.bestMode}`;
+    setStatus(
+      `${data.bestMode} selected from development only · ${data.best.metrics.trades} total trades · ${data.best.validation.trades} validation trades`,
+      "good"
+    );
 
 
   }catch(error){
 
-    $("status")
-      .textContent =
-        error.message;
+    console.error(error);
+
+
+    setStatus(
+      error.message ||
+      "Backtest failed",
+      "bad"
+    );
+
+
+  }finally{
+
+    button.disabled =
+      false;
+
+
+    button.textContent =
+      "RUN ROBUST V1.3 TEST";
 
   }
 
@@ -706,8 +2011,30 @@ function render(data){
       `${dateText(data.period.start)} → ${dateText(data.period.end)}`;
 
 
+  $("splitTime")
+    .textContent =
+      `Validation starts ${dateText(data.best.splitTime)}`;
+
+
   renderBest(
     data.best.metrics
+  );
+
+
+  renderSmallStats(
+    "development",
+    data.best.development
+  );
+
+
+  renderSmallStats(
+    "validation",
+    data.best.validation
+  );
+
+
+  renderDirection(
+    data.best.direction
   );
 
 
@@ -731,18 +2058,41 @@ function render(data){
       .equityCurve
   );
 
+
+  renderCoverage(
+    data
+  );
+
 }
 
 
 /* =========================================================
-   BEST METRICS
+   BEST
 ========================================================= */
 
 function renderBest(m){
 
   const values = [
 
-    ["Trades",m.trades],
+    [
+      "Trades",
+      m.trades
+    ],
+
+    [
+      "Wins",
+      m.wins
+    ],
+
+    [
+      "Losses",
+      m.losses
+    ],
+
+    [
+      "Breakeven",
+      m.breakevens
+    ],
 
     [
       "Win Rate",
@@ -751,7 +2101,10 @@ function renderBest(m){
 
     [
       "Profit Factor",
-      num(m.profitFactor,2)
+      num(
+        m.profitFactor,
+        2
+      )
     ],
 
     [
@@ -776,27 +2129,15 @@ function renderBest(m){
 
     [
       "Final Balance",
-      num(m.finalBalance,2)
+      num(
+        m.finalBalance,
+        2
+      )
     ],
 
     [
       "Buy / Sell",
       `${m.buys} / ${m.sells}`
-    ],
-
-    [
-      "Grade",
-      m.grade
-    ],
-
-    [
-      "Wins",
-      m.wins
-    ],
-
-    [
-      "Losses",
-      m.losses
     ]
 
   ];
@@ -821,6 +2162,99 @@ function renderBest(m){
 
       <div class="metric">
 
+        <div class="metric-label">
+          ${label}
+        </div>
+
+        <div class="metric-value">
+          ${value}
+        </div>
+
+      </div>
+
+    `;
+
+  }
+
+
+  $("grade")
+    .textContent =
+      m.grade;
+
+
+  $("verdict")
+    .textContent =
+      m.verdict;
+
+}
+
+
+/* =========================================================
+   SMALL STATS
+========================================================= */
+
+function renderSmallStats(
+  id,
+  metrics
+){
+
+  const values = [
+
+    [
+      "Trades",
+      metrics.trades
+    ],
+
+    [
+      "Win Rate",
+      `${num(metrics.winRate,1)}%`
+    ],
+
+    [
+      "PF",
+      num(
+        metrics.profitFactor,
+        2
+      )
+    ],
+
+    [
+      "Expectancy",
+      `${num(metrics.expectancyR,3)}R`
+    ],
+
+    [
+      "Total",
+      `${num(metrics.totalR,2)}R`
+    ],
+
+    [
+      "Max DD",
+      `${num(metrics.maxDrawdown,2)}%`
+    ]
+
+  ];
+
+
+  const container =
+    $(id);
+
+
+  container.innerHTML =
+    "";
+
+
+  for(
+    const [
+      label,
+      value
+    ] of values
+  ){
+
+    container.innerHTML += `
+
+      <div class="small-stat">
+
         <span>
           ${label}
         </span>
@@ -834,6 +2268,138 @@ function renderBest(m){
     `;
 
   }
+
+}
+
+
+/* =========================================================
+   DIRECTION
+========================================================= */
+
+function renderDirection(direction){
+
+  renderDirectionSide(
+    "longStats",
+    direction.long
+  );
+
+
+  renderDirectionSide(
+    "shortStats",
+    direction.short
+  );
+
+}
+
+
+function renderDirectionSide(
+  id,
+  metrics
+){
+
+  const values = [
+
+    [
+      "Trades",
+      metrics.trades
+    ],
+
+    [
+      "Win Rate",
+      `${num(metrics.winRate,1)}%`
+    ],
+
+    [
+      "PF",
+      num(
+        metrics.profitFactor,
+        2
+      )
+    ],
+
+    [
+      "Expectancy",
+      `${num(metrics.expectancyR,3)}R`
+    ],
+
+    [
+      "Total",
+      `${num(metrics.totalR,2)}R`
+    ],
+
+    [
+      "Breakeven",
+      metrics.breakevens
+    ]
+
+  ];
+
+
+  const container =
+    $(id);
+
+
+  container.innerHTML =
+    "";
+
+
+  for(
+    const [
+      label,
+      value
+    ] of values
+  ){
+
+    container.innerHTML += `
+
+      <div class="small-stat">
+
+        <span>
+          ${label}
+        </span>
+
+        <b>
+          ${value}
+        </b>
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   COVERAGE WARNING
+========================================================= */
+
+function renderCoverage(data){
+
+  const warning =
+    $("coverageWarning");
+
+
+  if(
+    data.regimeCoverage ===
+      "BOTH DIRECTIONS TESTED"
+  ){
+
+    warning.style.display =
+      "none";
+
+    return;
+
+  }
+
+
+  warning.style.display =
+    "block";
+
+
+  warning.textContent =
+    `${data.regimeCoverage}: the backtest has not yet demonstrated the strategy in both bullish and bearish regimes. Increase the historical window before treating the result as robust.`;
 
 }
 
@@ -856,8 +2422,8 @@ function renderModes(modes){
     const mode of modes
   ){
 
-    const m =
-      mode.metrics;
+    const d =
+      mode.development;
 
 
     const v =
@@ -866,77 +2432,87 @@ function renderModes(modes){
 
     grid.innerHTML += `
 
-      <div class="mode-card">
+      <div class="mode">
 
         <div class="mode-name">
           ${mode.mode}
         </div>
 
-        <div class="stats">
 
-          <div class="stat">
+        <div class="small">
+          DEVELOPMENT
+        </div>
+
+        <div
+          class="small-grid"
+          style="margin-top:8px"
+        >
+
+          <div class="small-stat">
             <span>Trades</span>
-            <b>${m.trades}</b>
+            <b>${d.trades}</b>
           </div>
 
-          <div class="stat">
-            <span>Win Rate</span>
-            <b>${num(m.winRate,1)}%</b>
-          </div>
-
-          <div class="stat">
+          <div class="small-stat">
             <span>PF</span>
-            <b>${num(m.profitFactor,2)}</b>
+            <b>${num(d.profitFactor,2)}</b>
           </div>
 
-          <div class="stat">
+          <div class="small-stat">
             <span>Expectancy</span>
-            <b>${num(m.expectancyR,3)}R</b>
+            <b>${num(d.expectancyR,3)}R</b>
           </div>
 
-          <div class="stat">
+          <div class="small-stat">
             <span>Total</span>
-            <b>${num(m.totalR,2)}R</b>
-          </div>
-
-          <div class="stat">
-            <span>DD</span>
-            <b>${num(m.maxDrawdown,2)}%</b>
+            <b>${num(d.totalR,2)}R</b>
           </div>
 
         </div>
 
 
-        <div class="validation">
+        <div
+          class="small"
+          style="
+            margin-top:14px;
+          "
+        >
+          VALIDATION
+        </div>
 
-          <div class="validation-title">
-            LAST 30% VALIDATION
+
+        <div
+          class="small-grid"
+          style="margin-top:8px"
+        >
+
+          <div class="small-stat">
+            <span>Trades</span>
+            <b>${v.trades}</b>
           </div>
 
-          <div class="stats">
-
-            <div class="stat">
-              <span>Trades</span>
-              <b>${v.trades}</b>
-            </div>
-
-            <div class="stat">
-              <span>PF</span>
-              <b>${num(v.profitFactor,2)}</b>
-            </div>
-
-            <div class="stat">
-              <span>Expectancy</span>
-              <b>${num(v.expectancyR,3)}R</b>
-            </div>
-
-            <div class="stat">
-              <span>Total</span>
-              <b>${num(v.totalR,2)}R</b>
-            </div>
-
+          <div class="small-stat">
+            <span>PF</span>
+            <b>${num(v.profitFactor,2)}</b>
           </div>
 
+          <div class="small-stat">
+            <span>Expectancy</span>
+            <b>${num(v.expectancyR,3)}R</b>
+          </div>
+
+          <div class="small-stat">
+            <span>Total</span>
+            <b>${num(v.totalR,2)}R</b>
+          </div>
+
+        </div>
+
+
+        <div class="selection">
+          Development selection score:
+          ${num(mode.selectionScore,2)}
+          · Grade ${mode.grade}
         </div>
 
       </div>
@@ -959,20 +2535,22 @@ function renderMarket(latest){
   }
 
 
-  $("bias")
-    .textContent =
-      latest.bias;
+  const bias =
+    $("bias");
 
 
-  $("bias")
-    .className =
-      `best ${
-        latest.bias === "BULLISH"
-          ? "bull"
-          : latest.bias === "BEARISH"
-            ? "bear"
-            : "neutral"
-      }`;
+  bias.textContent =
+    latest.bias;
+
+
+  bias.className =
+    `big ${
+      latest.bias === "BULLISH"
+        ? "bull"
+        : latest.bias === "BEARISH"
+          ? "bear"
+          : "neutral"
+    }`;
 
 
   $("marketTime")
@@ -981,6 +2559,68 @@ function renderMarket(latest){
         latest.time
       );
 
+
+  /* =======================================================
+     LIVE SIGNAL STATUS
+  ======================================================= */
+
+  const live =
+    $("liveSignals");
+
+
+  live.innerHTML =
+    "";
+
+
+  for(
+    const mode of
+    latest.liveModes
+  ){
+
+    const signalClass =
+      mode.signal === "BUY"
+        ? "bull"
+        : mode.signal === "SELL"
+          ? "bear"
+          : "neutral";
+
+
+    live.innerHTML += `
+
+      <div class="live-signal">
+
+        <span>
+          ${mode.mode}
+        </span>
+
+        <b class="${signalClass}">
+          ${mode.signal}
+        </b>
+
+        ${
+          mode.score !== null
+            ? `
+                <div class="small">
+                  Score ${mode.score}
+                </div>
+              `
+            : `
+                <div class="small">
+                  No entry trigger
+                </div>
+              `
+        }
+
+      </div>
+
+    `;
+
+  }
+
+
+  /* =======================================================
+     TIMEFRAMES
+  ======================================================= */
 
   const grid =
     $("tfGrid");
@@ -992,27 +2632,40 @@ function renderMarket(latest){
 
   const labels = {
 
-    m5:"M5",
-    m15:"M15",
-    h1:"H1",
-    h4:"H4"
+    m5:
+      "M5",
+
+    m15:
+      "M15",
+
+    h1:
+      "H1",
+
+    h4:
+      "H4"
 
   };
 
 
   for(
     const key of
-    Object.keys(labels)
+    Object.keys(
+      labels
+    )
   ){
 
     const tf =
-      latest.timeframes[key];
+      latest.timeframes[
+        key
+      ];
 
 
-    const stateClass =
-      tf.direction === "BULLISH"
+    const cls =
+      tf.direction ===
+        "BULLISH"
         ? "bull"
-        : tf.direction === "BEARISH"
+        : tf.direction ===
+          "BEARISH"
           ? "bear"
           : "neutral";
 
@@ -1025,7 +2678,7 @@ function renderMarket(latest){
           ${labels[key]}
         </h3>
 
-        <div class="tf-state ${stateClass}">
+        <div class="tf-state ${cls}">
           ${tf.direction}
         </div>
 
@@ -1083,6 +2736,7 @@ function renderTrades(trades){
 
 
   if(
+    !trades ||
     !trades.length
   ){
 
@@ -1090,7 +2744,14 @@ function renderTrades(trades){
 
       <tr>
 
-        <td colspan="9">
+        <td
+          colspan="10"
+          style="
+            padding:30px;
+            text-align:center;
+            color:#8999af;
+          "
+        >
           No trades.
         </td>
 
@@ -1107,18 +2768,19 @@ function renderTrades(trades){
     const trade of trades
   ){
 
-    const cls =
-      trade.side === "BUY"
+    const sideClass =
+      trade.side ===
+        "BUY"
         ? "buy"
         : "sell";
 
 
-    const rcls =
+    const resultClass =
       trade.netR > 0
         ? "bull"
-        : trade.netR < 0
-          ? "bear"
-          : "neutral";
+        : trade.result === "BE"
+          ? "neutral"
+          : "bear";
 
 
     body.innerHTML += `
@@ -1126,9 +2788,11 @@ function renderTrades(trades){
       <tr>
 
         <td>
-          <span class="tag ${cls}">
+
+          <span class="tag ${sideClass}">
             ${trade.side}
           </span>
+
         </td>
 
         <td>
@@ -1155,12 +2819,16 @@ function renderTrades(trades){
           ${num(trade.exit,2)}
         </td>
 
-        <td class="${rcls}">
+        <td class="${resultClass}">
           ${num(trade.netR,2)}R
         </td>
 
-        <td class="${rcls}">
+        <td class="${resultClass}">
           ${trade.result}
+        </td>
+
+        <td>
+          ${trade.holdBars}
         </td>
 
       </tr>
@@ -1173,7 +2841,7 @@ function renderTrades(trades){
 
 
 /* =========================================================
-   CHART
+   EQUITY CURVE
 ========================================================= */
 
 function drawChart(curve){
@@ -1195,19 +2863,32 @@ function drawChart(curve){
 
 
   const dpr =
-    window.devicePixelRatio || 1;
+    window.devicePixelRatio ||
+    1;
 
 
   canvas.width =
-    width * dpr;
+    width *
+    dpr;
 
 
   canvas.height =
-    height * dpr;
+    height *
+    dpr;
+
+
+  canvas.style.width =
+    `${width}px`;
+
+
+  canvas.style.height =
+    `${height}px`;
 
 
   const ctx =
-    canvas.getContext("2d");
+    canvas.getContext(
+      "2d"
+    );
 
 
   ctx.scale(
@@ -1228,39 +2909,73 @@ function drawChart(curve){
     !curve ||
     curve.length < 2
   ){
+
+    ctx.fillStyle =
+      "#8999af";
+
+
+    ctx.font =
+      "14px -apple-system";
+
+
+    ctx.fillText(
+      "Not enough trades to draw equity curve.",
+      20,
+      35
+    );
+
+
     return;
+
   }
 
 
-  const pad =
-    25;
+  const padding =
+    26;
 
 
   const values =
     curve.map(
-      x =>
-        Number(x.equity)
+      point =>
+        Number(
+          point.equity
+        )
     );
 
 
   let min =
-    Math.min(...values);
+    Math.min(
+      ...values
+    );
 
 
   let max =
-    Math.max(...values);
+    Math.max(
+      ...values
+    );
 
 
   if(
     min === max
   ){
+
     min -= 1;
+
     max += 1;
+
   }
 
 
+  /* =======================================================
+     GRID
+  ======================================================= */
+
   ctx.strokeStyle =
     "rgba(255,255,255,.055)";
+
+
+  ctx.lineWidth =
+    1;
 
 
   for(
@@ -1270,10 +2985,10 @@ function drawChart(curve){
   ){
 
     const y =
-      pad +
+      padding +
       (
         height -
-        pad * 2
+        padding * 2
       ) *
       i /
       4;
@@ -1281,26 +2996,35 @@ function drawChart(curve){
 
     ctx.beginPath();
 
+
     ctx.moveTo(
-      pad,
+      padding,
       y
     );
 
+
     ctx.lineTo(
-      width - pad,
+      width -
+      padding,
       y
     );
+
 
     ctx.stroke();
 
   }
 
 
+  /* =======================================================
+     EQUITY
+  ======================================================= */
+
   const gradient =
     ctx.createLinearGradient(
-      pad,
+      padding,
       0,
-      width - pad,
+      width -
+      padding,
       0
     );
 
@@ -1312,7 +3036,7 @@ function drawChart(curve){
 
 
   gradient.addColorStop(
-    .5,
+    .50,
     "#50dadd"
   );
 
@@ -1328,7 +3052,7 @@ function drawChart(curve){
 
 
   ctx.lineWidth =
-    2.3;
+    2.4;
 
 
   ctx.beginPath();
@@ -1337,13 +3061,13 @@ function drawChart(curve){
   curve.forEach(
     (
       point,
-      i
+      index
     ) => {
 
       const x =
-        pad +
+        padding +
         (
-          i /
+          index /
           (
             curve.length -
             1
@@ -1351,13 +3075,13 @@ function drawChart(curve){
         ) *
         (
           width -
-          pad * 2
+          padding * 2
         );
 
 
       const y =
         height -
-        pad -
+        padding -
         (
           (
             point.equity -
@@ -1370,12 +3094,12 @@ function drawChart(curve){
         ) *
         (
           height -
-          pad * 2
+          padding * 2
         );
 
 
       if(
-        i === 0
+        index === 0
       ){
 
         ctx.moveTo(
@@ -1398,19 +3122,56 @@ function drawChart(curve){
 
   ctx.stroke();
 
+
+  ctx.fillStyle =
+    "#8999af";
+
+
+  ctx.font =
+    "10px -apple-system";
+
+
+  ctx.fillText(
+    max.toLocaleString(
+      undefined,
+      {
+        maximumFractionDigits:0
+      }
+    ),
+    7,
+    14
+  );
+
+
+  ctx.fillText(
+    min.toLocaleString(
+      undefined,
+      {
+        maximumFractionDigits:0
+      }
+    ),
+    7,
+    height -
+    8
+  );
+
 }
 
+
+/* =========================================================
+   RESIZE
+========================================================= */
 
 window.addEventListener(
   "resize",
   () => {
 
     if(
-      dataCache
+      lastData
     ){
 
       drawChart(
-        dataCache.best.metrics
+        lastData.best.metrics
           .equityCurve
       );
 
@@ -1420,9 +3181,13 @@ window.addEventListener(
 );
 
 
+/* =========================================================
+   START
+========================================================= */
+
 window.addEventListener(
   "load",
-  load
+  runBacktest
 );
 
 </script>
